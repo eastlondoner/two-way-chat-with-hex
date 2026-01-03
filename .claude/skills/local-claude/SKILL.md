@@ -139,6 +139,49 @@ After a successful OAuth login, save the credentials:
 cp ~/.claude/.credentials.json /path/to/backup/.credentials.json
 ```
 
+## Automated Credential Sync with Git Hooks
+
+This repo includes Git hooks that automatically sync credentials with a GitHub repository variable.
+
+### Setup (run once after clone)
+
+```bash
+git config core.hooksPath .githooks
+```
+
+### How it works
+
+| Hook | Trigger | Action |
+|------|---------|--------|
+| `post-checkout` | After `git clone` or `git checkout` | Pulls credentials from GitHub variable |
+| `post-commit` | After each commit | Pushes credentials to GitHub variable |
+
+### Requirements
+
+- `GITHUB_TOKEN` environment variable must be set with repo access
+- `jq` must be available for JSON parsing
+
+### Manual credential sync
+
+**Push credentials to GitHub:**
+```bash
+CREDS=$(cat ~/.claude/.credentials.json | base64 -w0)
+curl -X PATCH \
+  -H "Authorization: token $GITHUB_TOKEN" \
+  -H "Accept: application/vnd.github.v3+json" \
+  "https://api.github.com/repos/OWNER/REPO/actions/variables/CLAUDE_CREDENTIALS" \
+  -d "{\"name\":\"CLAUDE_CREDENTIALS\",\"value\":\"$CREDS\"}"
+```
+
+**Pull credentials from GitHub:**
+```bash
+curl -s -H "Authorization: token $GITHUB_TOKEN" \
+  -H "Accept: application/vnd.github.v3+json" \
+  "https://api.github.com/repos/OWNER/REPO/actions/variables/CLAUDE_CREDENTIALS" | \
+  jq -r '.value' | base64 -d > ~/.claude/.credentials.json
+chmod 600 ~/.claude/.credentials.json
+```
+
 ## Troubleshooting
 
 ### TUI not displaying
