@@ -82,6 +82,63 @@ tmux capture-pane -t claude-local -p -S -30
 - **Capture output**: `tmux capture-pane -t claude-local -p -S -50`
 - **Kill session**: `tmux kill-session -t claude-local`
 
+## Reusing Credentials (Skip OAuth Login)
+
+Once authenticated, Claude stores credentials in `~/.claude/.credentials.json`. You can copy this file to skip the OAuth flow on new instances.
+
+### Credentials file location
+
+```
+~/.claude/.credentials.json
+```
+
+### Credentials format
+
+```json
+{
+  "claudeAiOauth": {
+    "accessToken": "sk-ant-oat01-...",
+    "refreshToken": "sk-ant-ort01-...",
+    "expiresAt": 1767499673845,
+    "scopes": ["user:inference", "user:profile", "user:sessions:claude_code"],
+    "subscriptionType": "max",
+    "rateLimitTier": "default_claude_max_5x"
+  }
+}
+```
+
+### Quick start with existing credentials
+
+If you have a valid credentials file, copy it before starting Claude:
+
+```bash
+# Create config directory if needed
+mkdir -p ~/.claude
+
+# Copy credentials (from backup or another instance)
+cp /path/to/saved/.credentials.json ~/.claude/.credentials.json
+
+# Then start Claude normally (still need to unset remote vars)
+tmux kill-session -t claude-local 2>/dev/null
+tmux new-session -d -s claude-local
+tmux send-keys -t claude-local 'unset CLAUDE_CODE_REMOTE CLAUDE_CODE_ENTRYPOINT CLAUDECODE CLAUDE_CODE_SESSION_ID CLAUDE_CODE_REMOTE_SESSION_ID CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR CLAUDE_CODE_WEBSOCKET_AUTH_FILE_DESCRIPTOR' Enter
+tmux send-keys -t claude-local 'claude' Enter
+```
+
+### Token expiration
+
+- Access tokens expire after ~8 hours
+- The refresh token automatically obtains new access tokens
+- If refresh fails, you'll need to re-authenticate via OAuth
+
+### Backup credentials after login
+
+After a successful OAuth login, save the credentials:
+
+```bash
+cp ~/.claude/.credentials.json /path/to/backup/.credentials.json
+```
+
 ## Troubleshooting
 
 ### TUI not displaying
@@ -92,3 +149,8 @@ The OAuth code expires quickly. Request a fresh URL if needed by restarting Clau
 
 ### Session appears frozen
 The TUI might be waiting for input. Try sending `Enter` or check with `tmux capture-pane`.
+
+### Credentials not working
+- Check if access token has expired (`expiresAt` field)
+- Ensure the file has correct permissions: `chmod 600 ~/.claude/.credentials.json`
+- Try deleting and re-authenticating if refresh token is invalid
