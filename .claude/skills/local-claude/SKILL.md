@@ -131,6 +131,23 @@ tmux send-keys -t claude-local 'claude' Enter
 - The refresh token automatically obtains new access tokens
 - If refresh fails, you'll need to re-authenticate via OAuth
 
+### Automated token refresh via GitHub Actions
+
+This repo includes a GitHub Action (`.github/workflows/refresh-claude-token.yml`) that automatically refreshes tokens before they expire:
+
+- **Schedule**: Runs every 6 hours (before the 8-hour expiry)
+- **Manual trigger**: Can be run manually via `workflow_dispatch`
+- **How it works**:
+  1. Pulls credentials from `CLAUDE_CREDENTIALS` repository variable
+  2. Checks if token is within 2 hours of expiry
+  3. Installs Claude CLI and runs a simple command (triggers internal refresh)
+  4. Pushes updated credentials back to the GitHub variable
+
+To trigger manually:
+```bash
+gh workflow run refresh-claude-token.yml
+```
+
 ### Backup credentials after login
 
 After a successful OAuth login, save the credentials:
