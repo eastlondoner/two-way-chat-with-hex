@@ -93,7 +93,7 @@ jobs:
       - name: Update credentials variable
         if: steps.restore.outputs.skip != 'true' && steps.refresh.outputs.refreshed == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
           # Read updated credentials and push to GitHub
           NEW_ENCODED=$(cat ~/.claude/.credentials.json | base64 -w0)
