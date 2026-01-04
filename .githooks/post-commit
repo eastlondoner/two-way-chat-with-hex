@@ -1,0 +1,55 @@
+#!/bin/bash
+# Post-commit hook: Push Claude credentials to GitHub variable
+# This syncs credentials after each commit (in case they were refreshed)
+
+set -e
+
+# Check if credentials file exists
+if [ ! -f ~/.claude/.credentials.json ]; then
+    exit 0
+fi
+
+# Check if GITHUB_TOKEN is available
+if [ -z "$GITHUB_TOKEN" ]; then
+    exit 0
+fi
+
+# Get repo info from git remote
+REPO_URL=$(git remote get-url origin 2>/dev/null || echo "")
+if [ -z "$REPO_URL" ]; then
+    exit 0
+fi
+
+# Extract owner/repo from URL
+REPO=$(echo "$REPO_URL" | sed -E 's|.*github\.com[:/](.+)(\.git)?$|\1|' | sed 's/\.git$//')
+
+if [ -z "$REPO" ]; then
+    exit 0
+fi
+
+# Base64 encode credentials
+CREDS=$(cat ~/.claude/.credentials.json | base64 -w0)
+
+# Check if variable exists
+EXISTS=$(curl -s -o /dev/null -w "%{http_code}" \
+    -H "Authorization: token $GITHUB_TOKEN" \
+    -H "Accept: application/vnd.github.v3+json" \
+    "https://api.github.com/repos/$REPO/actions/variables/CLAUDE_CREDENTIALS" 2>/dev/null)
+
+if [ "$EXISTS" = "200" ]; then
+    # Update existing variable
+    curl -s -X PATCH \
+        -H "Authorization: token $GITHUB_TOKEN" \
+        -H "Accept: application/vnd.github.v3+json" \
+        "https://api.github.com/repos/$REPO/actions/variables/CLAUDE_CREDENTIALS" \
+        -d "{\"name\":\"CLAUDE_CREDENTIALS\",\"value\":\"$CREDS\"}" > /dev/null 2>&1
+else
+    # Create new variable
+    curl -s -X POST \
+        -H "Authorization: token $GITHUB_TOKEN" \
+        -H "Accept: application/vnd.github.v3+json" \
+        "https://api.github.com/repos/$REPO/actions/variables" \
+        -d "{\"name\":\"CLAUDE_CREDENTIALS\",\"value\":\"$CREDS\"}" > /dev/null 2>&1
+fi
+
+echo "[claude-credentials] Credentials synced to GitHub"
