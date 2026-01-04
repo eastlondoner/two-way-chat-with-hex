@@ -2,6 +2,9 @@
 # Post-checkout hook: Pull Claude credentials from GitHub variable
 # This runs after `git clone` and `git checkout`
 
+# Ensure ~/.claude directory exists
+mkdir -p "${HOME}/.claude"
+
 # Logging setup
 LOG_DIR="${HOME}/.claude/logs"
 LOG_FILE="${LOG_DIR}/post-checkout.log"
