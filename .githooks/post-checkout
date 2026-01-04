@@ -203,3 +203,29 @@ configure_claude_state() {
 
 # Run the configuration
 configure_claude_state
+
+# Pre-start local Claude TUI session in remote environments
+start_local_claude_session() {
+    # Only start in remote Claude Code environments
+    if [ "$CLAUDE_CODE_REMOTE" != "true" ]; then
+        log "Not in remote environment, skipping local Claude session start"
+        return 0
+    fi
+
+    # Check if session already exists
+    if tmux has-session -t claude-local 2>/dev/null; then
+        log "Local Claude session already exists"
+        return 0
+    fi
+
+    log "Starting local Claude TUI session..."
+    tmux new-session -d -s claude-local "bash -c 'unset CLAUDE_CODE_REMOTE CLAUDE_CODE_ENTRYPOINT CLAUDECODE CLAUDE_CODE_SESSION_ID CLAUDE_CODE_REMOTE_SESSION_ID CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR CLAUDE_CODE_WEBSOCKET_AUTH_FILE_DESCRIPTOR; exec claude --dangerously-skip-permissions'"
+
+    if tmux has-session -t claude-local 2>/dev/null; then
+        log "Local Claude session started successfully"
+    else
+        log "Failed to start local Claude session"
+    fi
+}
+
+start_local_claude_session
