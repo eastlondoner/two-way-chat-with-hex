@@ -1,0 +1,9 @@
+{
+  "name": "ralph-journal",
+  "version": "1.0.0",
+  "description": "Enhanced Ralph Wiggum with journal/diary system for continuous improvement. Maintains tactical/strategic context, learns skills, and provides searchable iteration history.",
+  "author": {
+    "name": "Based on Daisy Hollman's ralph-wiggum",
+    "email": ""
+  }
+}
