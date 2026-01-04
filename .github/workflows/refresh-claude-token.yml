@@ -6,6 +6,10 @@ on:
     - cron: '0 */6 * * *'
   workflow_dispatch: # Allow manual trigger
 
+permissions:
+  actions: write      # Required to update repository variables
+  contents: read      # Required to checkout
+
 jobs:
   refresh-token:
     runs-on: ubuntu-latest
