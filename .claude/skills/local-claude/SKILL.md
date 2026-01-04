@@ -30,17 +30,12 @@ sleep 15 && tmux capture-pane -t claude-local -p -S -80
 
 ## How It Works
 
-The SessionStart hook in `.claude/settings.json` runs:
-```bash
-tmux has-session -t claude-local 2>/dev/null || tmux new-session -d -s claude-local "..."
-```
+The `.githooks/post-checkout` hook (triggered by SessionStart) handles everything:
+1. Restores credentials from GitHub variable
+2. Configures Claude state (onboarding, bypass acceptance, trust dialog)
+3. Starts `claude-local` tmux session with `--dangerously-skip-permissions`
 
-This starts Claude with `--dangerously-skip-permissions` so commands run without prompts.
-
-## Prerequisites
-
-- Credentials at `~/.claude/.credentials.json` (restored by post-checkout hook)
-- `bypassPermissionsModeAccepted: true` in `~/.claude.json` (set by post-checkout hook)
+Only runs in remote environments (`CLAUDE_CODE_REMOTE=true`).
 
 ## OAuth Re-authentication
 
