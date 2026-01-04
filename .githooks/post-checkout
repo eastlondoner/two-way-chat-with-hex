@@ -2,48 +2,80 @@
 # Post-checkout hook: Pull Claude credentials from GitHub variable
 # This runs after `git clone` and `git checkout`
 
+# Logging setup
+LOG_DIR="${HOME}/.claude/logs"
+LOG_FILE="${LOG_DIR}/post-checkout.log"
+mkdir -p "$LOG_DIR"
+
+log() {
+    local timestamp=$(date -Iseconds)
+    echo "[$timestamp] $1" | tee -a "$LOG_FILE"
+}
+
+# Log start and capture exit status
+log "=== post-checkout hook started ==="
+log "Args: prev_HEAD=$1 new_HEAD=$2 branch_checkout=$3"
+
+cleanup() {
+    local exit_code=$?
+    if [ $exit_code -eq 0 ]; then
+        log "=== post-checkout hook completed successfully ==="
+    else
+        log "=== post-checkout hook failed with exit code $exit_code ==="
+    fi
+}
+trap cleanup EXIT
+
 set -e
 
 # Only run on branch checkout (not file checkout)
 # $3 is 1 for branch checkout, 0 for file checkout
 if [ "$3" != "1" ]; then
+    log "Skipping: not a branch checkout (file checkout)"
     exit 0
 fi
 
 # Check if GITHUB_TOKEN is available
 if [ -z "$GITHUB_TOKEN" ]; then
-    echo "[claude-credentials] No GITHUB_TOKEN found, skipping credential sync"
+    log "No GITHUB_TOKEN found, skipping credential sync"
     exit 0
 fi
 
 # Install gh CLI if not available
 if ! command -v gh &> /dev/null; then
-    echo "[claude-credentials] Installing GitHub CLI..."
-    if command -v apt-get &> /dev/null; then
-        curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg 2>/dev/null
-        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-        sudo apt-get update -qq && sudo apt-get install gh -y -qq
-    elif command -v brew &> /dev/null; then
-        brew install gh
+    log "Installing GitHub CLI..."
+    GH_VERSION=$(curl -s https://api.github.com/repos/cli/cli/releases/latest | jq -r '.tag_name' | sed 's/^v//')
+    if [ -n "$GH_VERSION" ] && [ "$GH_VERSION" != "null" ]; then
+        curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz" -o /tmp/gh.tar.gz && \
+        tar -xzf /tmp/gh.tar.gz -C /tmp && \
+        sudo mv /tmp/gh_${GH_VERSION}_linux_amd64/bin/gh /usr/local/bin/ && \
+        rm -rf /tmp/gh.tar.gz /tmp/gh_${GH_VERSION}_linux_amd64
+        log "GitHub CLI v${GH_VERSION} installed successfully"
     else
-        echo "[claude-credentials] Cannot install gh CLI, falling back to curl"
+        log "Could not determine gh version, continuing without gh"
     fi
+else
+    log "GitHub CLI already installed: $(gh --version | head -1)"
 fi
 
 # Get repo info from git remote
 REPO_URL=$(git remote get-url origin 2>/dev/null || echo "")
 if [ -z "$REPO_URL" ]; then
+    log "No git remote origin found, skipping"
     exit 0
 fi
+log "Remote URL: $REPO_URL"
 
 # Extract owner/repo from URL (handles both HTTPS and SSH)
 REPO=$(echo "$REPO_URL" | sed -E 's|.*github\.com[:/](.+)(\.git)?$|\1|' | sed 's/\.git$//')
 
 if [ -z "$REPO" ]; then
+    log "Could not extract repo from URL, skipping"
     exit 0
 fi
+log "Repository: $REPO"
 
-echo "[claude-credentials] Fetching credentials from GitHub variable..."
+log "Fetching credentials from GitHub variable..."
 
 # Fetch credentials from GitHub variable
 RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
@@ -51,7 +83,8 @@ RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
     "https://api.github.com/repos/$REPO/actions/variables/CLAUDE_CREDENTIALS" 2>/dev/null || echo "")
 
 if [ -z "$RESPONSE" ] || echo "$RESPONSE" | grep -q '"message"'; then
-    echo "[claude-credentials] No credentials found in GitHub variable, skipping"
+    log "No credentials found in GitHub variable (or API error), skipping"
+    log "Response: $RESPONSE"
     exit 0
 fi
 
@@ -59,7 +92,7 @@ fi
 VALUE=$(echo "$RESPONSE" | jq -r '.value // empty' 2>/dev/null)
 
 if [ -z "$VALUE" ]; then
-    echo "[claude-credentials] Could not parse credentials, skipping"
+    log "Could not parse credentials from response, skipping"
     exit 0
 fi
 
@@ -68,4 +101,4 @@ mkdir -p ~/.claude
 echo "$VALUE" | base64 -d > ~/.claude/.credentials.json
 chmod 600 ~/.claude/.credentials.json
 
-echo "[claude-credentials] Credentials restored successfully"
+log "Credentials restored successfully to ~/.claude/.credentials.json"
