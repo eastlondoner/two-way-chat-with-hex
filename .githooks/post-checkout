@@ -114,3 +114,84 @@ echo "$VALUE" | base64 -d > ~/.claude/.credentials.json
 chmod 600 ~/.claude/.credentials.json
 
 log "Credentials restored successfully to ~/.claude/.credentials.json"
+
+# Configure Claude Code local state to skip onboarding dialogs
+CLAUDE_JSON="${HOME}/.claude.json"
+PROJECT_DIR=$(pwd)
+
+configure_claude_state() {
+    log "Configuring Claude Code local state..."
+
+    # Create ~/.claude.json if it doesn't exist
+    if [ ! -f "$CLAUDE_JSON" ]; then
+        echo '{}' > "$CLAUDE_JSON"
+        log "Created new ~/.claude.json"
+    fi
+
+    # Set hasCompletedOnboarding if not already set
+    if ! jq -e '.hasCompletedOnboarding' "$CLAUDE_JSON" > /dev/null 2>&1; then
+        jq '.hasCompletedOnboarding = true' "$CLAUDE_JSON" > "${CLAUDE_JSON}.tmp" && mv "${CLAUDE_JSON}.tmp" "$CLAUDE_JSON"
+        log "Set hasCompletedOnboarding = true"
+    else
+        log "hasCompletedOnboarding already set"
+    fi
+
+    # Set theme if not already set
+    if ! jq -e '.theme' "$CLAUDE_JSON" > /dev/null 2>&1; then
+        jq '.theme = "dark"' "$CLAUDE_JSON" > "${CLAUDE_JSON}.tmp" && mv "${CLAUDE_JSON}.tmp" "$CLAUDE_JSON"
+        log "Set theme = dark"
+    else
+        log "theme already set"
+    fi
+
+    # Initialize projects object if it doesn't exist
+    if ! jq -e '.projects' "$CLAUDE_JSON" > /dev/null 2>&1; then
+        jq '.projects = {}' "$CLAUDE_JSON" > "${CLAUDE_JSON}.tmp" && mv "${CLAUDE_JSON}.tmp" "$CLAUDE_JSON"
+        log "Initialized projects object"
+    fi
+
+    # Initialize project entry if it doesn't exist
+    if ! jq -e ".projects[\"$PROJECT_DIR\"]" "$CLAUDE_JSON" > /dev/null 2>&1; then
+        jq ".projects[\"$PROJECT_DIR\"] = {}" "$CLAUDE_JSON" > "${CLAUDE_JSON}.tmp" && mv "${CLAUDE_JSON}.tmp" "$CLAUDE_JSON"
+        log "Initialized project entry for $PROJECT_DIR"
+    fi
+
+    # Set hasTrustDialogAccepted for this project
+    if ! jq -e ".projects[\"$PROJECT_DIR\"].hasTrustDialogAccepted" "$CLAUDE_JSON" > /dev/null 2>&1 || \
+       [ "$(jq -r ".projects[\"$PROJECT_DIR\"].hasTrustDialogAccepted" "$CLAUDE_JSON")" != "true" ]; then
+        jq ".projects[\"$PROJECT_DIR\"].hasTrustDialogAccepted = true" "$CLAUDE_JSON" > "${CLAUDE_JSON}.tmp" && mv "${CLAUDE_JSON}.tmp" "$CLAUDE_JSON"
+        log "Set hasTrustDialogAccepted = true for $PROJECT_DIR"
+    else
+        log "hasTrustDialogAccepted already set for $PROJECT_DIR"
+    fi
+
+    # Auto-enable MCP servers from .mcp.json if it exists
+    MCP_JSON="${PROJECT_DIR}/.mcp.json"
+    if [ -f "$MCP_JSON" ]; then
+        log "Found .mcp.json, auto-enabling MCP servers..."
+
+        # Get list of MCP server names from .mcp.json
+        MCP_SERVERS=$(jq -r '.mcpServers | keys[]' "$MCP_JSON" 2>/dev/null || echo "")
+
+        if [ -n "$MCP_SERVERS" ]; then
+            # Build JSON array of server names
+            SERVERS_ARRAY=$(echo "$MCP_SERVERS" | jq -R -s 'split("\n") | map(select(length > 0))')
+
+            # Merge with existing enabledMcpjsonServers (avoiding duplicates)
+            EXISTING=$(jq -r ".projects[\"$PROJECT_DIR\"].enabledMcpjsonServers // []" "$CLAUDE_JSON")
+            MERGED=$(echo "[$EXISTING, $SERVERS_ARRAY]" | jq -s 'add | flatten | unique')
+
+            jq ".projects[\"$PROJECT_DIR\"].enabledMcpjsonServers = $MERGED" "$CLAUDE_JSON" > "${CLAUDE_JSON}.tmp" && mv "${CLAUDE_JSON}.tmp" "$CLAUDE_JSON"
+            log "Enabled MCP servers: $(echo $MCP_SERVERS | tr '\n' ' ')"
+        else
+            log "No MCP servers found in .mcp.json"
+        fi
+    else
+        log "No .mcp.json found in project"
+    fi
+
+    log "Claude Code local state configured successfully"
+}
+
+# Run the configuration
+configure_claude_state
