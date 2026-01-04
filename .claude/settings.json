@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".githooks/post-checkout 0000000000000000000000000000000000000000 $(git rev-parse HEAD) 1"
+          }
+        ]
+      }
+    ]
+  }
+}
