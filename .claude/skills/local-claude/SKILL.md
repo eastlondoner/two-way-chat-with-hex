@@ -137,16 +137,19 @@ This repo includes a GitHub Action (`.github/workflows/refresh-claude-token.yml`
 
 - **Schedule**: Runs every 6 hours (before the 8-hour expiry)
 - **Manual trigger**: Can be run manually via `workflow_dispatch`
+- **Requires**: `PAT_TOKEN` secret with repo scope (for updating variables)
 - **How it works**:
   1. Pulls credentials from `CLAUDE_CREDENTIALS` repository variable
-  2. Checks if token is within 2 hours of expiry
-  3. Installs Claude CLI and runs a simple command (triggers internal refresh)
-  4. Pushes updated credentials back to the GitHub variable
+  2. Installs Claude CLI and patches the refresh threshold from 5min to 8 hours
+  3. Runs Claude CLI which triggers internal token refresh
+  4. Pushes updated credentials back to the GitHub variable using `PAT_TOKEN`
 
 To trigger manually:
 ```bash
-gh workflow run refresh-claude-token.yml
+gh workflow run refresh-claude-token.yml --repo eastlondoner/claude
 ```
+
+**If the workflow fails with "Token refresh failed"**: The token was likely revoked. Follow the "Manual credential sync" steps above to re-authenticate.
 
 ### Backup credentials after login
 
@@ -180,7 +183,36 @@ git config core.hooksPath .githooks
 
 ### Manual credential sync
 
-**Push credentials to GitHub:**
+When the token gets revoked (e.g., from a failed refresh workflow), you need to re-authenticate and update the GitHub variable manually.
+
+#### Step 1: Re-authenticate via OAuth
+
+```bash
+# Start OAuth flow
+tmux kill-session -t claude-reauth 2>/dev/null
+tmux new-session -d -s claude-reauth
+tmux send-keys -t claude-reauth 'unset CLAUDE_CODE_REMOTE CLAUDE_CODE_ENTRYPOINT CLAUDECODE CLAUDE_CODE_SESSION_ID CLAUDE_CODE_REMOTE_SESSION_ID CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR CLAUDE_CODE_WEBSOCKET_AUTH_FILE_DESCRIPTOR' Enter
+tmux send-keys -t claude-reauth 'claude /login' Enter
+
+# Wait and get the OAuth URL
+sleep 5
+tmux capture-pane -t claude-reauth -p
+
+# After user provides code:
+tmux send-keys -t claude-reauth '<CODE_HERE>' Enter
+tmux send-keys -t claude-reauth Enter  # Press Enter to continue
+```
+
+#### Step 2: Update GitHub variable (IMPORTANT)
+
+After successful OAuth login, update the GitHub variable with the new credentials:
+
+```bash
+# Using gh CLI (recommended - simple and reliable)
+gh variable set CLAUDE_CREDENTIALS --repo eastlondoner/claude --body "$(base64 -w0 ~/.claude/.credentials.json)"
+```
+
+Alternative using curl:
 ```bash
 CREDS=$(cat ~/.claude/.credentials.json | base64 -w0)
 curl -X PATCH \
@@ -190,7 +222,21 @@ curl -X PATCH \
   -d "{\"name\":\"CLAUDE_CREDENTIALS\",\"value\":\"$CREDS\"}"
 ```
 
+#### Step 3: Verify the variable was updated
+
+```bash
+# Check the variable exists and has content
+gh variable list --repo eastlondoner/claude | grep CLAUDE_CREDENTIALS
+```
+
 **Pull credentials from GitHub:**
+```bash
+# Using gh CLI
+gh variable get CLAUDE_CREDENTIALS --repo eastlondoner/claude | base64 -d > ~/.claude/.credentials.json
+chmod 600 ~/.claude/.credentials.json
+```
+
+Alternative using curl:
 ```bash
 curl -s -H "Authorization: token $GITHUB_TOKEN" \
   -H "Accept: application/vnd.github.v3+json" \
