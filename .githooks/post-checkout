@@ -69,8 +69,17 @@ if [ -z "$REPO_URL" ]; then
 fi
 log "Remote URL: $REPO_URL"
 
-# Extract owner/repo from URL (handles both HTTPS and SSH)
-REPO=$(echo "$REPO_URL" | sed -E 's|.*github\.com[:/](.+)(\.git)?$|\1|' | sed 's/\.git$//')
+# Extract owner/repo from URL (handles HTTPS, SSH, and local proxy URLs)
+# Patterns:
+#   - github.com:owner/repo or github.com/owner/repo
+#   - local proxy: http://...127.0.0.1:.../git/owner/repo
+if echo "$REPO_URL" | grep -q 'github\.com'; then
+    REPO=$(echo "$REPO_URL" | sed -E 's|.*github\.com[:/](.+)(\.git)?$|\1|' | sed 's/\.git$//')
+elif echo "$REPO_URL" | grep -qE '/git/[^/]+/[^/]+$'; then
+    REPO=$(echo "$REPO_URL" | sed -E 's|.*/git/([^/]+/[^/]+)$|\1|')
+else
+    REPO=""
+fi
 
 if [ -z "$REPO" ]; then
     log "Could not extract repo from URL, skipping"
