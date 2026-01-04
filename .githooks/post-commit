@@ -2,21 +2,46 @@
 # Post-commit hook: Push Claude credentials to GitHub variable
 # This syncs credentials after each commit (in case they were refreshed)
 
+# Logging setup
+LOG_DIR="${HOME}/.claude/logs"
+LOG_FILE="${LOG_DIR}/post-commit.log"
+mkdir -p "$LOG_DIR"
+
+log() {
+    local timestamp=$(date -Iseconds)
+    echo "[$timestamp] $1" | tee -a "$LOG_FILE"
+}
+
+log "=== post-commit hook started ==="
+
+cleanup() {
+    local exit_code=$?
+    if [ $exit_code -eq 0 ]; then
+        log "=== post-commit hook completed successfully ==="
+    else
+        log "=== post-commit hook failed with exit code $exit_code ==="
+    fi
+}
+trap cleanup EXIT
+
 set -e
 
 # Check if credentials file exists
 if [ ! -f ~/.claude/.credentials.json ]; then
+    log "No local credentials file found, skipping"
     exit 0
 fi
 
 # Check if GITHUB_TOKEN is available
 if [ -z "$GITHUB_TOKEN" ]; then
+    log "No GITHUB_TOKEN found, skipping"
     exit 0
 fi
 
 # Get repo info from git remote
 REPO_URL=$(git remote get-url origin 2>/dev/null || echo "")
 if [ -z "$REPO_URL" ]; then
+    log "No git remote origin found, skipping"
     exit 0
 fi
 
@@ -24,13 +49,41 @@ fi
 REPO=$(echo "$REPO_URL" | sed -E 's|.*github\.com[:/](.+)(\.git)?$|\1|' | sed 's/\.git$//')
 
 if [ -z "$REPO" ]; then
+    log "Could not extract repo from URL, skipping"
     exit 0
+fi
+log "Repository: $REPO"
+
+# Get local credentials expiry
+LOCAL_EXPIRES=$(jq -r '.claudeAiOauth.expiresAt // 0' ~/.claude/.credentials.json 2>/dev/null)
+log "Local credentials expiresAt: $LOCAL_EXPIRES"
+
+# Fetch current credentials from GitHub to compare
+RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+    -H "Accept: application/vnd.github.v3+json" \
+    "https://api.github.com/repos/$REPO/actions/variables/CLAUDE_CREDENTIALS" 2>/dev/null || echo "")
+
+if echo "$RESPONSE" | grep -q '"value"'; then
+    # Variable exists, compare timestamps
+    REMOTE_VALUE=$(echo "$RESPONSE" | jq -r '.value // empty' 2>/dev/null)
+    if [ -n "$REMOTE_VALUE" ]; then
+        REMOTE_EXPIRES=$(echo "$REMOTE_VALUE" | base64 -d 2>/dev/null | jq -r '.claudeAiOauth.expiresAt // 0' 2>/dev/null)
+        log "Remote credentials expiresAt: $REMOTE_EXPIRES"
+
+        if [ "$REMOTE_EXPIRES" -gt "$LOCAL_EXPIRES" ] 2>/dev/null; then
+            log "Remote credentials are newer (remote: $REMOTE_EXPIRES > local: $LOCAL_EXPIRES), skipping upload"
+            exit 0
+        fi
+        log "Local credentials are newer or equal, proceeding with upload"
+    fi
+else
+    log "No existing credentials on GitHub, will create new"
 fi
 
 # Base64 encode credentials
 CREDS=$(cat ~/.claude/.credentials.json | base64 -w0)
 
-# Check if variable exists
+# Check if variable exists (for create vs update)
 EXISTS=$(curl -s -o /dev/null -w "%{http_code}" \
     -H "Authorization: token $GITHUB_TOKEN" \
     -H "Accept: application/vnd.github.v3+json" \
@@ -38,6 +91,7 @@ EXISTS=$(curl -s -o /dev/null -w "%{http_code}" \
 
 if [ "$EXISTS" = "200" ]; then
     # Update existing variable
+    log "Updating existing GitHub variable..."
     curl -s -X PATCH \
         -H "Authorization: token $GITHUB_TOKEN" \
         -H "Accept: application/vnd.github.v3+json" \
@@ -45,6 +99,7 @@ if [ "$EXISTS" = "200" ]; then
         -d "{\"name\":\"CLAUDE_CREDENTIALS\",\"value\":\"$CREDS\"}" > /dev/null 2>&1
 else
     # Create new variable
+    log "Creating new GitHub variable..."
     curl -s -X POST \
         -H "Authorization: token $GITHUB_TOKEN" \
         -H "Accept: application/vnd.github.v3+json" \
@@ -52,4 +107,4 @@ else
         -d "{\"name\":\"CLAUDE_CREDENTIALS\",\"value\":\"$CREDS\"}" > /dev/null 2>&1
 fi
 
-echo "[claude-credentials] Credentials synced to GitHub"
+log "Credentials synced to GitHub"
