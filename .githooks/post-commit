@@ -71,7 +71,10 @@ if echo "$RESPONSE" | grep -q '"value"'; then
         log "Remote credentials expiresAt: $REMOTE_EXPIRES"
 
         if [ "$REMOTE_EXPIRES" -gt "$LOCAL_EXPIRES" ] 2>/dev/null; then
-            log "Remote credentials are newer (remote: $REMOTE_EXPIRES > local: $LOCAL_EXPIRES), skipping upload"
+            log "Remote credentials are newer (remote: $REMOTE_EXPIRES > local: $LOCAL_EXPIRES), updating local file"
+            echo "$REMOTE_VALUE" | base64 -d > ~/.claude/.credentials.json
+            chmod 600 ~/.claude/.credentials.json
+            log "Local credentials updated from GitHub"
             exit 0
         fi
         log "Local credentials are newer or equal, proceeding with upload"
