@@ -104,13 +104,11 @@ jobs:
 
           echo "Token refreshed and saved to GitHub variable!"
 
-      - name: Report status
-        if: always()
+      - name: Verify refresh succeeded
+        if: steps.restore.outputs.skip != 'true'
         run: |
-          if [ "${{ steps.restore.outputs.skip }}" == "true" ]; then
-            echo "::notice::Token refresh skipped (no credentials found)"
-          elif [ "${{ steps.refresh.outputs.refreshed }}" == "true" ]; then
-            echo "::notice::Token refreshed successfully!"
-          else
-            echo "::warning::Token refresh may have failed - credentials unchanged"
+          if [ "${{ steps.refresh.outputs.refreshed }}" != "true" ]; then
+            echo "::error::Token refresh failed - credentials unchanged or revoked"
+            exit 1
           fi
+          echo "::notice::Token refreshed and saved successfully!"
