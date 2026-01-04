@@ -144,6 +144,14 @@ configure_claude_state() {
         log "theme already set"
     fi
 
+    # Set bypassPermissionsModeAccepted to skip the bypass dialog in sandboxed environments
+    if ! jq -e '.bypassPermissionsModeAccepted' "$CLAUDE_JSON" > /dev/null 2>&1; then
+        jq '.bypassPermissionsModeAccepted = true' "$CLAUDE_JSON" > "${CLAUDE_JSON}.tmp" && mv "${CLAUDE_JSON}.tmp" "$CLAUDE_JSON"
+        log "Set bypassPermissionsModeAccepted = true"
+    else
+        log "bypassPermissionsModeAccepted already set"
+    fi
+
     # Initialize projects object if it doesn't exist
     if ! jq -e '.projects' "$CLAUDE_JSON" > /dev/null 2>&1; then
         jq '.projects = {}' "$CLAUDE_JSON" > "${CLAUDE_JSON}.tmp" && mv "${CLAUDE_JSON}.tmp" "$CLAUDE_JSON"

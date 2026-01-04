@@ -9,45 +9,37 @@ Run a separate Claude Code instance outside the remote environment.
 
 ## Quick Reference
 
-### Non-Interactive Query (Recommended for most tasks)
+### Interactive Session (with bypass permissions)
 
 ```bash
-env -u CLAUDE_CODE_REMOTE -u CLAUDE_CODE_ENTRYPOINT -u CLAUDECODE -u CLAUDE_CODE_SESSION_ID -u CLAUDE_CODE_REMOTE_SESSION_ID -u CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR -u CLAUDE_CODE_WEBSOCKET_AUTH_FILE_DESCRIPTOR \
-  claude -p "your query here" --dangerously-skip-permissions
-```
-
-This is the fastest approach - no TUI, no permission prompts, direct output.
-
-### Interactive Session (When TUI is needed)
-
-```bash
-# Start session
+# Start session with bypass mode (no permission prompts)
 tmux kill-session -t claude-local 2>/dev/null
-tmux new-session -d -s claude-local "bash -c 'unset CLAUDE_CODE_REMOTE CLAUDE_CODE_ENTRYPOINT CLAUDECODE CLAUDE_CODE_SESSION_ID CLAUDE_CODE_REMOTE_SESSION_ID CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR CLAUDE_CODE_WEBSOCKET_AUTH_FILE_DESCRIPTOR; exec claude'"
+tmux new-session -d -s claude-local "bash -c 'unset CLAUDE_CODE_REMOTE CLAUDE_CODE_ENTRYPOINT CLAUDECODE CLAUDE_CODE_SESSION_ID CLAUDE_CODE_REMOTE_SESSION_ID CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR CLAUDE_CODE_WEBSOCKET_AUTH_FILE_DESCRIPTOR; exec claude --dangerously-skip-permissions'"
 
-# Wait and check
+# Wait for TUI
 sleep 5 && tmux capture-pane -t claude-local -p -S -30
 
-# Send query (two Enters: one to type, one to submit)
-tmux send-keys -t claude-local 'your query' Enter Enter
+# Send query (double Enter to submit)
+tmux send-keys -t claude-local 'your query here' Enter Enter
 
-# Get output
-sleep 15 && tmux capture-pane -t claude-local -p -S -100
+# Capture response
+sleep 15 && tmux capture-pane -t claude-local -p -S -80
 ```
 
 ### Session Commands
 
 | Action | Command |
 |--------|---------|
-| Attach | `tmux attach -t claude-local` |
-| Send input | `tmux send-keys -t claude-local 'text' Enter` |
 | Capture output | `tmux capture-pane -t claude-local -p -S -50` |
+| Send query | `tmux send-keys -t claude-local 'text' Enter Enter` |
+| Attach | `tmux attach -t claude-local` |
 | Kill | `tmux kill-session -t claude-local` |
 
 ## Prerequisites
 
-- Credentials at `~/.claude/.credentials.json` (restored automatically by post-checkout hook)
-- tmux (for interactive sessions only)
+- Credentials at `~/.claude/.credentials.json` (restored by post-checkout hook)
+- `bypassPermissionsModeAccepted: true` in `~/.claude.json` (set by post-checkout hook)
+- tmux available
 
 ## OAuth Re-authentication
 
