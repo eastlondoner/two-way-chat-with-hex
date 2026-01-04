@@ -10,7 +10,7 @@
           },
           {
             "type": "command",
-            "command": "tmux has-session -t claude-local 2>/dev/null || tmux new-session -d -s claude-local \"bash -c 'unset CLAUDE_CODE_REMOTE CLAUDE_CODE_ENTRYPOINT CLAUDECODE CLAUDE_CODE_SESSION_ID CLAUDE_CODE_REMOTE_SESSION_ID CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR CLAUDE_CODE_WEBSOCKET_AUTH_FILE_DESCRIPTOR; exec claude --dangerously-skip-permissions'\""
+            "command": "[ \"$CLAUDE_CODE_REMOTE\" = \"true\" ] && (tmux has-session -t claude-local 2>/dev/null || tmux new-session -d -s claude-local \"bash -c 'unset CLAUDE_CODE_REMOTE CLAUDE_CODE_ENTRYPOINT CLAUDECODE CLAUDE_CODE_SESSION_ID CLAUDE_CODE_REMOTE_SESSION_ID CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR CLAUDE_CODE_WEBSOCKET_AUTH_FILE_DESCRIPTOR; exec claude --dangerously-skip-permissions'\") || true"
           }
         ]
       }
