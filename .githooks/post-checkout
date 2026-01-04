@@ -1,0 +1,57 @@
+#!/bin/bash
+# Post-checkout hook: Pull Claude credentials from GitHub variable
+# This runs after `git clone` and `git checkout`
+
+set -e
+
+# Only run on branch checkout (not file checkout)
+# $3 is 1 for branch checkout, 0 for file checkout
+if [ "$3" != "1" ]; then
+    exit 0
+fi
+
+# Check if GITHUB_TOKEN is available
+if [ -z "$GITHUB_TOKEN" ]; then
+    echo "[claude-credentials] No GITHUB_TOKEN found, skipping credential sync"
+    exit 0
+fi
+
+# Get repo info from git remote
+REPO_URL=$(git remote get-url origin 2>/dev/null || echo "")
+if [ -z "$REPO_URL" ]; then
+    exit 0
+fi
+
+# Extract owner/repo from URL (handles both HTTPS and SSH)
+REPO=$(echo "$REPO_URL" | sed -E 's|.*github\.com[:/](.+)(\.git)?$|\1|' | sed 's/\.git$//')
+
+if [ -z "$REPO" ]; then
+    exit 0
+fi
+
+echo "[claude-credentials] Fetching credentials from GitHub variable..."
+
+# Fetch credentials from GitHub variable
+RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+    -H "Accept: application/vnd.github.v3+json" \
+    "https://api.github.com/repos/$REPO/actions/variables/CLAUDE_CREDENTIALS" 2>/dev/null || echo "")
+
+if [ -z "$RESPONSE" ] || echo "$RESPONSE" | grep -q '"message"'; then
+    echo "[claude-credentials] No credentials found in GitHub variable, skipping"
+    exit 0
+fi
+
+# Extract and decode the value
+VALUE=$(echo "$RESPONSE" | jq -r '.value // empty' 2>/dev/null)
+
+if [ -z "$VALUE" ]; then
+    echo "[claude-credentials] Could not parse credentials, skipping"
+    exit 0
+fi
+
+# Write credentials to Claude config
+mkdir -p ~/.claude
+echo "$VALUE" | base64 -d > ~/.claude/.credentials.json
+chmod 600 ~/.claude/.credentials.json
+
+echo "[claude-credentials] Credentials restored successfully"
