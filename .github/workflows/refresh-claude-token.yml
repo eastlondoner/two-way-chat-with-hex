@@ -21,6 +21,25 @@ jobs:
       - name: Install Claude CLI
         run: npm install -g @anthropic-ai/claude-code
 
+      - name: Patch CLI refresh threshold
+        run: |
+          # The CLI only refreshes tokens within 5 minutes of expiry (300000ms)
+          # Patch it to refresh within 8 hours (28800000ms) so scheduled runs work
+          CLI_PATH=$(npm root -g)/@anthropic-ai/claude-code/cli.js
+          echo "Patching $CLI_PATH"
+
+          # Change: function ec(A){if(A===null)return!1;let Q=300000;
+          # To:     function ec(A){if(A===null)return!1;let Q=28800000;
+          sed -i 's/function ec(A){if(A===null)return!1;let Q=300000;/function ec(A){if(A===null)return!1;let Q=28800000;/' "$CLI_PATH"
+
+          # Verify the patch
+          if grep -q 'function ec(A){if(A===null)return!1;let Q=28800000;' "$CLI_PATH"; then
+            echo "Patch applied successfully - refresh threshold now 8 hours"
+          else
+            echo "Warning: Patch may not have applied correctly"
+            grep -o 'function ec(A){if(A===null)return.{0,30}' "$CLI_PATH" || true
+          fi
+
       - name: Restore credentials
         id: restore
         env:
@@ -38,19 +57,11 @@ jobs:
           echo "$ENCODED_CREDS" | base64 -d > ~/.claude/.credentials.json
           chmod 600 ~/.claude/.credentials.json
 
-          # Check expiry time
+          # Show current expiry for logging
           EXPIRES_AT=$(cat ~/.claude/.credentials.json | jq -r '.claudeAiOauth.expiresAt')
-          NOW_MS=$(date +%s)000
-          TWO_HOURS_MS=7200000
-          THRESHOLD=$((EXPIRES_AT - TWO_HOURS_MS))
+          EXPIRES_DATE=$(date -d @$((EXPIRES_AT / 1000)) 2>/dev/null || echo "unknown")
+          echo "Current token expires at: $EXPIRES_AT ($EXPIRES_DATE)"
 
-          if [ "$NOW_MS" -lt "$THRESHOLD" ]; then
-            echo "Token still valid (expires at $EXPIRES_AT), skipping refresh"
-            echo "skip=true" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          echo "Token expires soon, will refresh"
           echo "skip=false" >> $GITHUB_OUTPUT
           echo "old_expires_at=$EXPIRES_AT" >> $GITHUB_OUTPUT
 
@@ -59,16 +70,16 @@ jobs:
         id: refresh
         run: |
           # Run a simple Claude command - this triggers internal token refresh
-          # The CLI automatically refreshes tokens when they're close to expiry
-          # Using --print to just output without interactive mode
-          timeout 30 claude --print "Say 'Token refresh check successful'" 2>&1 || true
+          # With our patched threshold, it will refresh if token expires within 8 hours
+          timeout 30 claude --print "Say 'ok'" 2>&1 || true
 
           # Check if credentials were updated
           NEW_EXPIRES_AT=$(cat ~/.claude/.credentials.json | jq -r '.claudeAiOauth.expiresAt')
           OLD_EXPIRES_AT="${{ steps.restore.outputs.old_expires_at }}"
 
           if [ "$NEW_EXPIRES_AT" != "$OLD_EXPIRES_AT" ]; then
-            echo "Token was refreshed! New expiry: $NEW_EXPIRES_AT"
+            NEW_DATE=$(date -d @$((NEW_EXPIRES_AT / 1000)) 2>/dev/null || echo "unknown")
+            echo "Token was refreshed! New expiry: $NEW_EXPIRES_AT ($NEW_DATE)"
             echo "refreshed=true" >> $GITHUB_OUTPUT
           else
             echo "Token was not refreshed (expiry unchanged: $NEW_EXPIRES_AT)"
@@ -93,7 +104,7 @@ jobs:
         if: always()
         run: |
           if [ "${{ steps.restore.outputs.skip }}" == "true" ]; then
-            echo "::notice::Token refresh skipped (still valid or no credentials)"
+            echo "::notice::Token refresh skipped (no credentials found)"
           elif [ "${{ steps.refresh.outputs.refreshed }}" == "true" ]; then
             echo "::notice::Token refreshed successfully!"
           else
