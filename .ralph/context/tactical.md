@@ -2,35 +2,28 @@
 
 *Current goals and immediate details for the task at hand.*
 
-## Current Goal
-Implementing `/search-journals` command for ralph-journal plugin to enable keyword-based search across journal entries stored in `.ralph/journal/*.md`.
-
 ## Current Blockers
-None - currently in planning phase.
+- **Iteration 1 - Execution not started:** Planning phase completed but no actual file creation has occurred yet. Need to execute Write tool call to `/tmp/hook-test.txt`.
 
 ## Recent Decisions
-- **Iterative approach**: Build feature → tests → docs (avoids over-engineering, enables early validation)
-- **Minimal working feature first**: Core search functionality before enhancements
-- **Context extraction**: Return surrounding lines with matches for usefulness
+- **Hooks validation approach:** Using "canary in the coal mine" pattern - creating a minimal test file (`hook-test.txt`) to validate hooks system responds to file operations before relying on it for complex workflows.
+- **Completion criteria:** HOOKS_WORK promise will be satisfied when test file is successfully created and hooks system processes the event.
 
 ## Important Details
 
-### Implementation Requirements
-- Command: `/search-journals` with keyword argument
-- Search target: `.ralph/journal/*.md` files via file system traversal
-- Output: Matching entries with surrounding context lines
-- Must include comprehensive tests and documentation
+### Current Task: Hooks System Validation
+- **Goal:** Confirm hooks can detect and respond to file operations
+- **Test file path:** `/tmp/hook-test.txt`
+- **Required content:** `Testing hooks work` (exact string)
+- **Completion signal:** HOOKS_WORK promise
 
-### Technical Plan
-1. Core search: argument parsing + file reading
-2. Keyword matching logic + context extraction (surrounding lines)
-3. User-friendly result formatting
-4. Test suite (edge cases: no matches, multiple matches, special characters)
-5. Usage documentation with examples
-6. Test validation and iteration
+### Iteration 1 Execution Plan
+1. Use Write tool to create `hook-test.txt` in `/tmp` directory
+2. Write exact content: 'Testing hooks work'
+3. Confirm successful file creation
+4. Allow hooks system to process the file creation event
 
-### Open Technical Questions
-- **Case sensitivity**: Case-sensitive or case-insensitive search?
-- **Matching strategy**: Regex vs literal string matching?
-- **Performance**: Strategy for handling large journal collections?
-- **Context window**: How many lines before/after match to include?
+### Technical Notes
+- Missing verification step: Should use Read tool after creation to confirm file contents
+- Self-documenting promise naming (HOOKS_WORK) for clarity
+- Simple, unambiguous task minimizes complexity for initial validation
