@@ -114,7 +114,7 @@ Focus on: $PROMPT_FOCUS"
           CLAUDE_CODE_WEBSOCKET_AUTH_FILE_DESCRIPTOR
 
     cd /tmp
-    echo "$UPDATE_PROMPT" | timeout 60 claude -p --model haiku --output-format text > "$TEMP_FILE" 2>/dev/null
+    echo "$UPDATE_PROMPT" | timeout 120 claude -p --model sonnet --output-format text > "$TEMP_FILE" 2>/dev/null
   ) || {
     echo "[$DOC_TYPE] Update failed, keeping current document"
     rm -f "$TEMP_FILE"
