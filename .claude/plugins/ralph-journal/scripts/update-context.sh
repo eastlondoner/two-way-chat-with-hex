@@ -73,18 +73,26 @@ $(cat "$f")
 "
   done
 
-  # Read current document
+  # Read current document and calculate size
   local CURRENT_DOC=""
+  local CURRENT_SIZE=0
   if [[ -f "$DOC_PATH" ]]; then
     CURRENT_DOC=$(cat "$DOC_PATH")
+    CURRENT_SIZE=${#CURRENT_DOC}
   fi
+  local REMAINING_CHARS=$((MAX_CHARS - CURRENT_SIZE))
 
   # Build update prompt
   local UPDATE_PROMPT="You are updating a context document based on new journal entries.
 
 ## Document Type: $DOC_TYPE
 ## Focus: $PROMPT_FOCUS
-## CRITICAL: Maximum size is $MAX_CHARS characters (approximately 6000 words)
+
+## Size Constraints
+- **Maximum allowed:** $MAX_CHARS characters
+- **Current size:** $CURRENT_SIZE characters
+- **Remaining capacity:** $REMAINING_CHARS characters
+- **Usage:** $((CURRENT_SIZE * 100 / MAX_CHARS))% full
 
 ## Current Document Content
 \`\`\`markdown
@@ -98,17 +106,16 @@ $JOURNAL_CONTENT
 1. Read the new journal entries carefully
 2. Extract information relevant to this document type ($DOC_TYPE)
 3. Update the document to incorporate new insights
-4. **SIZE MANAGEMENT IS CRITICAL:**
-   - Maximum allowed size: $MAX_CHARS characters
-   - REMOVE older content that is no longer relevant
-   - REMOVE duplicate or redundant information
+4. **SIZE MANAGEMENT IS CRITICAL** (see Size Constraints above):
+   - You MUST stay under $MAX_CHARS characters
+   - If currently over 50% full, REMOVE older/less relevant content
+   - If currently over 75% full, aggressively CONDENSE and DELETE stale content
    - SUMMARIZE verbose sections into concise bullet points
    - PRIORITIZE recent and actionable information over historical details
-   - When approaching the limit, aggressively condense or delete stale content
 5. Maintain markdown formatting
 6. Output ONLY the updated document content, no preamble
 
-**After writing your response, mentally verify it is under $MAX_CHARS characters. If it seems too long, revise to be more concise.**
+**IMPORTANT: Your output must be under $MAX_CHARS characters. Current document is $CURRENT_SIZE chars ($((CURRENT_SIZE * 100 / MAX_CHARS))% of limit).**
 
 Focus on: $PROMPT_FOCUS"
 
