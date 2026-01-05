@@ -115,6 +115,52 @@ chmod 600 ~/.claude/.credentials.json
 
 log "Credentials restored successfully to ~/.claude/.credentials.json"
 
+# Fetch and setup SSH key for desktop access
+setup_ssh_desktop_key() {
+    log "Fetching SSH key from GitHub variable..."
+
+    SSH_RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+        -H "Accept: application/vnd.github.v3+json" \
+        "https://api.github.com/repos/$REPO/actions/variables/CLAUDE_SSH_KEY" 2>/dev/null || echo "")
+
+    if [ -z "$SSH_RESPONSE" ] || echo "$SSH_RESPONSE" | grep -q '"message"'; then
+        log "No SSH key found in GitHub variable (or API error), skipping"
+        return 0
+    fi
+
+    SSH_KEY_B64=$(echo "$SSH_RESPONSE" | jq -r '.value // empty' 2>/dev/null)
+
+    if [ -z "$SSH_KEY_B64" ]; then
+        log "Could not parse SSH key from response, skipping"
+        return 0
+    fi
+
+    # Setup SSH directory and key
+    mkdir -p ~/.ssh
+    chmod 700 ~/.ssh
+
+    echo "$SSH_KEY_B64" | base64 -d > ~/.ssh/claude_desktop_key
+    chmod 600 ~/.ssh/claude_desktop_key
+
+    # Add to SSH config if not already present
+    if [ ! -f ~/.ssh/config ] || ! grep -q "IdentityFile.*claude_desktop_key" ~/.ssh/config; then
+        cat >> ~/.ssh/config << 'SSHCONFIG'
+
+# Claude desktop access key
+Host desktop
+    IdentityFile ~/.ssh/claude_desktop_key
+    StrictHostKeyChecking accept-new
+    UserKnownHostsFile ~/.ssh/known_hosts
+SSHCONFIG
+        chmod 600 ~/.ssh/config
+        log "Added desktop SSH config"
+    fi
+
+    log "SSH key restored successfully to ~/.ssh/claude_desktop_key"
+}
+
+setup_ssh_desktop_key
+
 # Configure Claude Code local state to skip onboarding dialogs
 CLAUDE_JSON="${HOME}/.claude.json"
 PROJECT_DIR=$(pwd)
