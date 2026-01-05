@@ -1,27 +1,28 @@
+```markdown
 # Learned Skills
 
 *Reusable patterns and lessons learned from iterations.*
 
 ## Patterns That Work
 
-### Direct Execution for Simple Tasks
-When tasks are simple and well-defined (e.g., creating a single file with specified content), execute directly without elaborate planning. Straightforward operations benefit from immediate action rather than complex orchestration.
-
-### Using Write Tool for New Files
-The Write tool is the appropriate choice for creating new files from scratch. It accepts file path and content parameters cleanly and executes reliably for basic file creation workflows.
+### Iterative Feature Development
+**Pattern:** Build features in phases: core functionality → tests → documentation  
+**Benefit:** Reduces over-engineering risk and enables early validation  
+**Context:** Applied when adding `/search-journals` command to ralph-journal plugin  
+**Key principle:** Validate working implementation before investing in tests/docs
 
 ## Anti-Patterns to Avoid
 None documented yet.
 
 ## Useful Commands
+None documented yet.
 
-### File Creation
-- **Write tool**: Use for creating new files with specified content. Reliable for basic file I/O operations.
+## Design Considerations
 
-## Lessons Learned
-
-### Baseline Validation (2026-01-05)
-- Basic file operations are reliable and require minimal planning
-- First iteration success on simple tasks establishes a positive baseline for subsequent, more complex work
-- Testing environment is properly configured for file I/O operations
-- Simple tasks executed cleanly validate the foundational capabilities needed for more advanced workflows
+### Search Feature Implementation
+When building keyword search across files:
+- **Case sensitivity:** Decide upfront (case-insensitive often more user-friendly)
+- **Matching strategy:** Regex vs literal matching (impacts complexity and user expectations)
+- **Performance:** Consider early optimization for large file collections
+- **Context extraction:** Lines before/after matches significantly impact usefulness
+```

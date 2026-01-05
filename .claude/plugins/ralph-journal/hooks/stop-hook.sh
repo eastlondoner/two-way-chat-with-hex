@@ -6,8 +6,13 @@
 set -euo pipefail
 
 PLUGIN_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-RALPH_DIR=".ralph"
+# Derive project root from plugin path (.claude/plugins/ralph-journal -> project root)
+PROJECT_ROOT="$(cd "$PLUGIN_ROOT/../../.." && pwd)"
+RALPH_DIR="$PROJECT_ROOT/.ralph"
 STATE_FILE="$RALPH_DIR/loop_state.json"
+
+# Change to project directory for consistent relative path handling
+cd "$PROJECT_ROOT"
 
 # Read hook input from stdin
 HOOK_INPUT=$(cat)

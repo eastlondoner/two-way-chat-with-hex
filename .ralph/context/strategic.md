@@ -1,33 +1,48 @@
+```markdown
 # Strategic Context
 
 *High-level direction and long-term considerations.*
 
 ## Overall Goal
-Create a file called sonnet-test.txt with 'Testing Sonnet model' in it
+Implement a /search-journals command for the ralph-journal plugin that searches journal entries by keyword. The command should:
+1. Accept a search term as argument
+2. Search through all .ralph/journal/*.md files
+3. Return matching entries with context
+4. Add documentation for the command
+5. Write tests for the search functionality
+6. Fix any issues found during testing
 
-**Status:** ✅ COMPLETED (Iteration 1, 2026-01-05)
+Work iteratively - implement the basic feature first, then add tests, then add docs.
 
-## Progress Summary
-The primary objective has been successfully achieved. Iteration 1 validated fundamental file manipulation capabilities through creation of the target file with specified content. This establishes a working baseline for file system interactions and confirms the operational environment is properly configured.
+## Current Status
+**Iteration 1 (2026-01-05):** Planning phase initiated. No implementation work has begun yet.
+
+Confirmed iterative development approach: feature → tests → docs. This reduces risk of over-engineering and enables early validation of core functionality.
 
 ## Architectural Decisions
-- **Tooling Approach:** Write tool identified as the appropriate mechanism for new file creation from scratch
-- **Execution Strategy:** Direct execution preferred for simple, well-defined tasks rather than elaborate planning overhead
-- **Validation Method:** Success confirmed through error-free tool execution and completion verification
+
+### Development Approach
+- **Iterative implementation strategy:** Build minimal working feature first, then layer on tests, then documentation
+- **Phased execution:**
+  1. Core search implementation (argument parsing, file reading)
+  2. Keyword matching logic with context extraction
+  3. Result formatting
+  4. Test suite development
+  5. Documentation
+  6. Iteration based on test results
+
+### Design Considerations (To Be Decided)
+- **Search matching:** Case sensitivity handling, regex vs literal string matching
+- **Context extraction:** Strategy for including surrounding lines (how many before/after match?)
+- **Performance:** Approach for handling large journal collections efficiently
 
 ## Key Dependencies
-- **Environment Configuration:** File I/O operations validated as functional in testing environment (confirmed working as of Iteration 1)
-- **Core Tooling:** Write tool availability and reliability for file creation workflows
+- File system traversal for `.ralph/journal/*.md` files
+- Context extraction mechanism (surrounding lines)
+- Result formatting strategy
 
 ## Risks & Considerations
-**Mitigated:**
-- ✅ Environment readiness for file operations - confirmed operational
-- ✅ Basic file creation workflow - validated successfully
-
-**Observations:**
-- First iteration success without complications limits learning from edge cases
-- Straightforward task completion provides limited insight into error handling capabilities
-- Foundation established for progressively more complex file system operations in future iterations
-
-## Future Baseline
-This iteration serves as a positive baseline, demonstrating that the fundamental building blocks for file manipulation are sound and can support more sophisticated workflows ahead.
+- **Performance risk:** Large journal collections may require optimization
+- **UX decisions needed:** Case sensitivity behavior, amount of context to display
+- **Search complexity:** Need to balance between simple literal matching and more powerful regex capabilities
+```
