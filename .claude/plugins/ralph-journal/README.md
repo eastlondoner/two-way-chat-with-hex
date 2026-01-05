@@ -34,6 +34,56 @@ Ralph Journal extends the original Ralph Wiggum technique (continuous self-refer
 /search-journals "How did we handle the timeout issue?"
 ```
 
+## Searching Journals
+
+The `/search-journals` command provides powerful search capabilities across all journal entries.
+
+### Basic Usage
+
+```bash
+# Simple keyword search
+/search-journals "database timeout"
+
+# Search with more context lines
+/search-journals "API error" --context 5
+
+# Just list matching files
+/search-journals "deploy" --list-only
+
+# Show more results
+/search-journals "kubernetes" --max-results 20
+
+# Case-sensitive search
+/search-journals "ERROR" --case-sensitive
+```
+
+### Search Options
+
+| Option | Description |
+|--------|-------------|
+| `-c, --context N` | Lines of context around matches (default: 3) |
+| `-n, --max-results N` | Maximum matching files to show (default: 10) |
+| `-i, --case-sensitive` | Make search case-sensitive (default: case-insensitive) |
+| `-l, --list-only` | Only list matching files, don't show content |
+| `-d, --dir DIR` | Ralph directory (default: .ralph) |
+
+### What to Search For
+
+- **Past solutions**: "How did we handle the timeout issue?"
+- **Configuration**: "What configuration worked for staging?"
+- **Blockers**: "What were the blockers in previous attempts?"
+- **Skills learned**: "What skills did we learn about Kubernetes?"
+- **Error messages**: Search for specific error text to find past resolutions
+
+### Output Format
+
+Search results include:
+- Total matches found across journals
+- For each matching journal:
+  - Iteration number and date
+  - Matching lines with context
+  - File location
+
 ## Directory Structure
 
 ```
