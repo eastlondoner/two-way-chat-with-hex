@@ -14,6 +14,13 @@ CONTEXT_DIR="$RALPH_DIR/context"
 SKILLS_DIR="$RALPH_DIR/skills"
 STATE_FILE="$CONTEXT_DIR/state.json"
 
+# Convert to absolute paths for use after cd
+RALPH_DIR=$(cd "$RALPH_DIR" && pwd)
+JOURNAL_DIR="$RALPH_DIR/journal"
+CONTEXT_DIR="$RALPH_DIR/context"
+SKILLS_DIR="$RALPH_DIR/skills"
+STATE_FILE="$CONTEXT_DIR/state.json"
+
 if [[ ! -d "$JOURNAL_DIR" ]]; then
   echo "No journal directory found" >&2
   exit 0
@@ -98,6 +105,7 @@ $JOURNAL_CONTENT
 Focus on: $PROMPT_FOCUS"
 
   # Run update via claude -p
+  # Run from /tmp to avoid project context interference
   local TEMP_FILE=$(mktemp)
   (
     unset CLAUDE_CODE_REMOTE CLAUDE_CODE_ENTRYPOINT CLAUDECODE \
@@ -105,7 +113,8 @@ Focus on: $PROMPT_FOCUS"
           CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR \
           CLAUDE_CODE_WEBSOCKET_AUTH_FILE_DESCRIPTOR
 
-    echo "$UPDATE_PROMPT" | timeout 120 claude -p --model sonnet --output-format text > "$TEMP_FILE" 2>/dev/null
+    cd /tmp
+    echo "$UPDATE_PROMPT" | timeout 60 claude -p --model haiku --output-format text > "$TEMP_FILE" 2>/dev/null
   ) || {
     echo "[$DOC_TYPE] Update failed, keeping current document"
     rm -f "$TEMP_FILE"

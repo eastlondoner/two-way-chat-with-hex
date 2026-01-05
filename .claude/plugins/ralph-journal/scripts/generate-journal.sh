@@ -22,6 +22,9 @@ fi
 
 mkdir -p "$JOURNAL_DIR"
 
+# Convert to absolute paths for use after cd
+JOURNAL_DIR=$(cd "$JOURNAL_DIR" && pwd)
+
 # Read loop state
 LOOP_ID=$(jq -r '.loop_id' "$LOOP_STATE_PATH")
 ITERATION=$(jq -r '.iteration' "$LOOP_STATE_PATH")
@@ -95,14 +98,15 @@ Output ONLY the markdown content, no preamble.
 "
 
 # Generate journal entry using claude -p
-# Unset env vars to avoid nesting issues
+# Unset env vars and run from /tmp to avoid project context interference
 (
   unset CLAUDE_CODE_REMOTE CLAUDE_CODE_ENTRYPOINT CLAUDECODE \
         CLAUDE_CODE_SESSION_ID CLAUDE_CODE_REMOTE_SESSION_ID \
         CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR \
         CLAUDE_CODE_WEBSOCKET_AUTH_FILE_DESCRIPTOR
 
-  echo "$JOURNAL_PROMPT" | timeout 120 claude -p --model sonnet --output-format text > "$JOURNAL_FILE" 2>/dev/null
+  cd /tmp
+  echo "$JOURNAL_PROMPT" | timeout 60 claude -p --model haiku --output-format text > "$JOURNAL_FILE" 2>/dev/null
 ) || {
   # Fallback if claude -p fails - create minimal journal
   cat > "$JOURNAL_FILE" <<EOF

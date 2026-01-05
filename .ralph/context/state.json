@@ -1,5 +1,11 @@
 {
-  "tactical": {"last_processed_journal": null},
-  "strategic": {"last_processed_journal": null},
-  "skills": {"last_processed_journal": null}
+  "tactical": {
+    "last_processed_journal": "2026-01-05T08-05-23_iter_001.md"
+  },
+  "strategic": {
+    "last_processed_journal": "2026-01-05T08-05-23_iter_001.md"
+  },
+  "skills": {
+    "last_processed_journal": null
+  }
 }
