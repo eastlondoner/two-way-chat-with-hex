@@ -84,6 +84,7 @@ $(cat "$f")
 
 ## Document Type: $DOC_TYPE
 ## Focus: $PROMPT_FOCUS
+## CRITICAL: Maximum size is $MAX_CHARS characters (approximately 6000 words)
 
 ## Current Document Content
 \`\`\`markdown
@@ -97,10 +98,17 @@ $JOURNAL_CONTENT
 1. Read the new journal entries carefully
 2. Extract information relevant to this document type ($DOC_TYPE)
 3. Update the document to incorporate new insights
-4. Keep the document under $MAX_CHARS characters
-5. Use summarization to stay within limits - older/less relevant info can be condensed
-6. Maintain markdown formatting
-7. Output ONLY the updated document content, no preamble
+4. **SIZE MANAGEMENT IS CRITICAL:**
+   - Maximum allowed size: $MAX_CHARS characters
+   - REMOVE older content that is no longer relevant
+   - REMOVE duplicate or redundant information
+   - SUMMARIZE verbose sections into concise bullet points
+   - PRIORITIZE recent and actionable information over historical details
+   - When approaching the limit, aggressively condense or delete stale content
+5. Maintain markdown formatting
+6. Output ONLY the updated document content, no preamble
+
+**After writing your response, mentally verify it is under $MAX_CHARS characters. If it seems too long, revise to be more concise.**
 
 Focus on: $PROMPT_FOCUS"
 
