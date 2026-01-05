@@ -142,9 +142,33 @@ setup_ssh_desktop_key() {
     echo "$SSH_KEY_B64" | base64 -d > ~/.ssh/claude_desktop_key
     chmod 600 ~/.ssh/claude_desktop_key
 
+    # Fetch desktop host and user from GitHub variables
+    DESKTOP_HOST_RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+        -H "Accept: application/vnd.github.v3+json" \
+        "https://api.github.com/repos/$REPO/actions/variables/CLAUDE_DESKTOP_HOST" 2>/dev/null || echo "")
+    DESKTOP_HOST=$(echo "$DESKTOP_HOST_RESPONSE" | jq -r '.value // empty' 2>/dev/null)
+
+    DESKTOP_USER_RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+        -H "Accept: application/vnd.github.v3+json" \
+        "https://api.github.com/repos/$REPO/actions/variables/CLAUDE_DESKTOP_USER" 2>/dev/null || echo "")
+    DESKTOP_USER=$(echo "$DESKTOP_USER_RESPONSE" | jq -r '.value // empty' 2>/dev/null)
+
     # Add to SSH config if not already present
     if [ ! -f ~/.ssh/config ] || ! grep -q "IdentityFile.*claude_desktop_key" ~/.ssh/config; then
-        cat >> ~/.ssh/config << 'SSHCONFIG'
+        if [ -n "$DESKTOP_HOST" ] && [ -n "$DESKTOP_USER" ]; then
+            cat >> ~/.ssh/config << SSHCONFIG
+
+# Claude desktop access key
+Host desktop
+    HostName ${DESKTOP_HOST}
+    User ${DESKTOP_USER}
+    IdentityFile ~/.ssh/claude_desktop_key
+    StrictHostKeyChecking accept-new
+    UserKnownHostsFile ~/.ssh/known_hosts
+SSHCONFIG
+            log "Added desktop SSH config (host: $DESKTOP_HOST, user: $DESKTOP_USER)"
+        else
+            cat >> ~/.ssh/config << 'SSHCONFIG'
 
 # Claude desktop access key
 Host desktop
@@ -152,8 +176,9 @@ Host desktop
     StrictHostKeyChecking accept-new
     UserKnownHostsFile ~/.ssh/known_hosts
 SSHCONFIG
+            log "Added desktop SSH config (no host/user configured)"
+        fi
         chmod 600 ~/.ssh/config
-        log "Added desktop SSH config"
     fi
 
     log "SSH key restored successfully to ~/.ssh/claude_desktop_key"
