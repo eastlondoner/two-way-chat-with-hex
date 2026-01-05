@@ -1,0 +1,22 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "local-plugins",
+  "description": "Local plugins for this repository",
+  "owner": {
+    "name": "Local",
+    "email": ""
+  },
+  "plugins": [
+    {
+      "name": "ralph-journal",
+      "description": "Enhanced Ralph Wiggum with journal/diary system for continuous improvement",
+      "version": "1.0.0",
+      "author": {
+        "name": "Based on Daisy Hollman's ralph-wiggum",
+        "email": ""
+      },
+      "source": "./ralph-journal",
+      "category": "development"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "active": false,
+  "loop_id": "1767604441-15851",
+  "iteration": 1,
+  "max_iterations": 0,
+  "completion_promise": "HOOKS_WORK",
+  "prompt": "Create a simple test file called hook-test.txt with 'Testing hooks work' in it\n",
+  "started_at": "2026-01-05T09:14:01Z",
+  "completed": true,
+  "completed_at": 1767604629.066142
+}
