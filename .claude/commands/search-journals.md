@@ -1,0 +1,1 @@
+../plugins/ralph-journal/commands/search-journals.md
