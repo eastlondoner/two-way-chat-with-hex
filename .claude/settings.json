@@ -10,6 +10,28 @@
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/plugins/ralph-journal/hooks/stop-hook.sh"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/plugins/ralph-journal/hooks/pre-compact.sh"
+          }
+        ]
+      }
     ]
   }
 }

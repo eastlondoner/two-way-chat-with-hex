@@ -1,8 +1,7 @@
 ---
 description: "Start Ralph Journal loop with diary system"
 argument-hint: "PROMPT [--max-iterations N] [--completion-promise TEXT]"
-allowed-tools: ["Bash(${CLAUDE_PLUGIN_ROOT}/scripts/setup-ralph-loop.sh)"]
-hide-from-slash-command-tool: "true"
+allowed-tools: ["Bash"]
 ---
 
 # Ralph Journal Loop Command
@@ -10,12 +9,15 @@ hide-from-slash-command-tool: "true"
 Execute the setup script to initialize the Ralph Journal loop:
 
 ```!
-chmod +x "${CLAUDE_PLUGIN_ROOT}/scripts/setup-ralph-loop.sh"
-chmod +x "${CLAUDE_PLUGIN_ROOT}/scripts/generate-journal.sh"
-chmod +x "${CLAUDE_PLUGIN_ROOT}/scripts/update-context.sh"
-chmod +x "${CLAUDE_PLUGIN_ROOT}/hooks/stop-hook.sh"
+PLUGIN_DIR=".claude/plugins/ralph-journal"
 
-"${CLAUDE_PLUGIN_ROOT}/scripts/setup-ralph-loop.sh" $ARGUMENTS
+chmod +x "$PLUGIN_DIR/scripts/setup-ralph-loop.sh"
+chmod +x "$PLUGIN_DIR/scripts/generate-journal.sh"
+chmod +x "$PLUGIN_DIR/scripts/update-context.sh"
+chmod +x "$PLUGIN_DIR/hooks/stop-hook.sh"
+chmod +x "$PLUGIN_DIR/hooks/pre-compact.sh"
+
+"$PLUGIN_DIR/scripts/setup-ralph-loop.sh" $ARGUMENTS
 
 if [ -f .ralph/loop_state.json ]; then
   PROMISE=$(jq -r '.completion_promise // ""' .ralph/loop_state.json)
