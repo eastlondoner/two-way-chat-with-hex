@@ -3,27 +3,42 @@
 *Current goals and immediate details for the task at hand.*
 
 ## Current Blockers
-- **Iteration 1 - Execution not started:** Planning phase completed but no actual file creation has occurred yet. Need to execute Write tool call to `/tmp/hook-test.txt`.
+- None
 
 ## Recent Decisions
-- **Hooks validation approach:** Using "canary in the coal mine" pattern - creating a minimal test file (`hook-test.txt`) to validate hooks system responds to file operations before relying on it for complex workflows.
-- **Completion criteria:** HOOKS_WORK promise will be satisfied when test file is successfully created and hooks system processes the event.
+- **New task initiated:** Document hook system input structure in Claude Code
+- **Approach:** Systematic investigation starting with existing hook example (stop-hook.sh), then create universal debugging script
+- **Deliverable:** Documentation at docs/HOOK_INPUT_FORMAT.md
+- **Completion promise:** HOOK_DEBUG_COMPLETE
+- **Testing strategy:** Trigger various hooks to verify understanding of HOOK_INPUT data structure
 
 ## Important Details
 
-### Current Task: Hooks System Validation
-- **Goal:** Confirm hooks can detect and respond to file operations
-- **Test file path:** `/tmp/hook-test.txt`
-- **Required content:** `Testing hooks work` (exact string)
-- **Completion signal:** HOOKS_WORK promise
+### Current Task: Hook System Documentation
+- **Goal:** Understand and document the HOOK_INPUT JSON format available to hooks
+- **Key deliverables:**
+  1. Examine stop-hook.sh for current hook usage patterns
+  2. Document HOOK_INPUT structure (transcript_path and other fields)
+  3. Create debugging script logging to /tmp/hook-debug.log
+  4. Test debugging mechanism
+  5. Generate docs/HOOK_INPUT_FORMAT.md
 
-### Iteration 1 Execution Plan
-1. Use Write tool to create `hook-test.txt` in `/tmp` directory
-2. Write exact content: 'Testing hooks work'
-3. Confirm successful file creation
-4. Allow hooks system to process the file creation event
+### Execution Plan
+1. ⏳ Read stop-hook.sh to see existing hook implementation
+2. Search codebase for hook-related code to understand input structure
+3. Create universal hook debugging script for logging all input data
+4. Test debugging script by triggering various hooks
+5. Compile findings into markdown documentation
 
 ### Technical Notes
-- Missing verification step: Should use Read tool after creation to confirm file contents
-- Self-documenting promise naming (HOOKS_WORK) for clarity
-- Simple, unambiguous task minimizes complexity for initial validation
+- HOOK_INPUT is an environment variable containing JSON data
+- transcript_path structure needs documentation
+- Debugging script should be generic (work with any hook type)
+- Real-world testing crucial - must trigger hooks to verify data structure
+- Investigation requires examining both shell scripts and Claude Code implementation
+
+### Context
+- Part of understanding Claude Code's hook system architecture
+- Establishes debugging mechanism for real-time hook inspection
+- Systematic approach: concrete examples first, then comprehensive documentation
+- Status: Just initiated - no actions taken yet

@@ -3,27 +3,64 @@
 *High-level direction and long-term considerations.*
 
 ## Overall Goal
-Validate that the hooks system is functioning correctly by creating a simple test file (`hook-test.txt` with content 'Testing hooks work'). This establishes confidence in hooks infrastructure before relying on it for more complex automated workflows.
+**CURRENT TASK:** Understand and document the Claude Code hook system's input structure, specifically the HOOK_INPUT JSON format available to hooks at runtime.
+
+**DELIVERABLES:**
+1. Comprehensive documentation at `docs/HOOK_INPUT_FORMAT.md`
+2. Universal debugging script for real-time hook input inspection (`/tmp/hook-debug.log`)
+3. Understanding of `transcript_path` and other available fields
+
+**PURPOSE:** Enable developers to effectively utilize hook system data when creating custom hooks. Establish debugging infrastructure for hook development.
 
 ## Current Status
-- **Phase:** Planning (Iteration 1)
-- **Progress:** Task defined, no execution yet
-- **Completion Promise:** HOOKS_WORK
+- **Phase:** Investigation initiated (Iteration 1)
+- **Loop ID:** Active investigation loop
+- **Progress:** Planning complete, execution beginning
+- **Completion Promise:** HOOK_DEBUG_COMPLETE
+- **Previous Context:** Test file creation task (1767719630-29527) completed successfully
 
 ## Architectural Approach
-Using a "canary in the coal mine" pattern - a minimal file creation operation to validate system behavior. This simple test with clear success criteria allows verification that hooks can detect and respond to file operations.
+
+### Investigation Strategy (Multi-Phase)
+1. **Example Analysis:** Examine `stop-hook.sh` for existing hook implementation patterns
+2. **Codebase Discovery:** Search for hook-related code to understand input structure
+3. **Tool Development:** Create universal debugging script for all hook types
+4. **Validation:** Trigger various hooks to verify data structure understanding
+5. **Documentation:** Compile findings into comprehensive markdown reference
+
+### Design Decisions
+- **Generic debugging script:** Must work with any hook type, not just stop-hook
+- **Real-time logging:** `/tmp/hook-debug.log` for immediate feedback during development
+- **Systematic approach:** Start with concrete examples before diving into implementation details
 
 ## Key Dependencies
-- Hooks system infrastructure must be properly configured in the environment
-- Ralph Loop framework (currently on iteration 1767604441-15851)
-- File system write permissions in `/tmp` directory
+- Access to `stop-hook.sh` script (existing hook implementation)
+- Claude Code codebase access for hook infrastructure code
+- File write permissions to `/tmp` for debugging logs
+- Ability to trigger hooks for testing validation
+- Read/Grep/Glob tools for codebase exploration
 
 ## Risks & Considerations
-- Hooks system may not be configured or operational
-- Need explicit verification step to confirm file was created successfully (current plan lacks this)
-- File creation event must be properly captured by hooks monitoring
+
+**MEDIUM COMPLEXITY TASK:**
+- Requires understanding both shell script layer and underlying Claude Code implementation
+- Hook data structure may vary by hook type - debugging script must accommodate
+- Documentation accuracy depends on thorough testing across multiple hook scenarios
+
+**CRITICAL SUCCESS FACTORS:**
+- Testing is essential - must actually trigger hooks to validate understanding
+- Documentation must be developer-friendly and include practical examples
+- Debugging script should be immediately useful for future hook development
+
+**PROCESS INSIGHTS:**
+- Clear completion promise (HOOK_DEBUG_COMPLETE) enables objective progress tracking
+- Well-defined deliverables prevent scope creep
+- Starting with existing examples (stop-hook.sh) provides concrete foundation
 
 ## Next Steps
-1. Execute Write tool to create `/tmp/hook-test.txt`
-2. Add verification step to confirm file contents using Read tool
-3. Monitor for hooks system response
+1. Locate and read `stop-hook.sh` to understand current hook usage patterns
+2. Search codebase for hook infrastructure implementation
+3. Identify all fields available in HOOK_INPUT environment variable
+4. Create universal debugging script with comprehensive logging
+5. Test debugging mechanism across multiple hook types
+6. Document findings at `docs/HOOK_INPUT_FORMAT.md`

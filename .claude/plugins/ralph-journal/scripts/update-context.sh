@@ -1,24 +1,23 @@
 #!/bin/bash
 
 # Update Context Documents Script
-# Updates tactical, strategic, and skills docs from new journal entries
+# Updates tactical and strategic docs from new journal entries
+# NOTE: Skills are now extracted as proper Claude Code skills via extract-skills.sh
 
 set -euo pipefail
 
-CONTEXT_TYPE="${1:-all}"  # tactical, strategic, skills, or all
+CONTEXT_TYPE="${1:-all}"  # tactical, strategic, or all
 RALPH_DIR="${2:-.ralph}"
 MAX_CHARS=25600
 
 JOURNAL_DIR="$RALPH_DIR/journal"
 CONTEXT_DIR="$RALPH_DIR/context"
-SKILLS_DIR="$RALPH_DIR/skills"
 STATE_FILE="$CONTEXT_DIR/state.json"
 
 # Convert to absolute paths for use after cd
 RALPH_DIR=$(cd "$RALPH_DIR" && pwd)
 JOURNAL_DIR="$RALPH_DIR/journal"
 CONTEXT_DIR="$RALPH_DIR/context"
-SKILLS_DIR="$RALPH_DIR/skills"
 STATE_FILE="$CONTEXT_DIR/state.json"
 
 if [[ ! -d "$JOURNAL_DIR" ]]; then
@@ -169,22 +168,17 @@ case "$CONTEXT_TYPE" in
     update_document "strategic" "$CONTEXT_DIR/strategic.md" \
       "Progress toward high-level goals, architectural decisions, dependencies, risks, timeline implications"
     ;;
-  skills)
-    update_document "skills" "$SKILLS_DIR/SKILLS.md" \
-      "Reusable patterns that worked, anti-patterns to avoid, useful commands, lessons learned"
-    ;;
   all)
-    # Run all updates (could be parallelized but keeping simple for now)
+    # Run tactical and strategic updates
+    # NOTE: Skills are now extracted separately via extract-skills.sh
     update_document "tactical" "$CONTEXT_DIR/tactical.md" \
       "Current blockers, recent decisions, specific technical details, error messages and solutions"
     update_document "strategic" "$CONTEXT_DIR/strategic.md" \
       "Progress toward high-level goals, architectural decisions, dependencies, risks"
-    update_document "skills" "$SKILLS_DIR/SKILLS.md" \
-      "Reusable patterns that worked, anti-patterns to avoid, useful commands, lessons learned"
     ;;
   *)
     echo "Unknown context type: $CONTEXT_TYPE" >&2
-    echo "Usage: $0 [tactical|strategic|skills|all]" >&2
+    echo "Usage: $0 [tactical|strategic|all]" >&2
     exit 1
     ;;
 esac

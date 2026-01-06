@@ -9,7 +9,7 @@ Ralph Journal extends the original Ralph Wiggum technique (continuous self-refer
 - **Journal entries** - Diary entry generated after each iteration
 - **Tactical context** - Current blockers, decisions, technical details (≤25KB)
 - **Strategic context** - High-level direction, architectural decisions (≤25KB)
-- **Skills learned** - Patterns that work, anti-patterns to avoid
+- **Claude Code Skills** - Learned patterns extracted as `.claude/skills/` (persistent across sessions!)
 - **Searchable history** - Query past iterations for relevant context
 
 ## Commands
@@ -96,9 +96,14 @@ Search results include:
 │   ├── tactical.md             # Current goals/details
 │   ├── strategic.md            # High-level direction
 │   └── state.json              # Processing state
-├── skills/
-│   └── SKILLS.md               # Learned capabilities
 └── loop_state.json             # Loop configuration
+
+.claude/skills/                 # Claude Code skills (AUTO-LOADED!)
+├── database-migrations/
+│   └── SKILL.md
+├── error-handling-patterns/
+│   └── SKILL.md
+└── ...                         # Skills persist across all sessions
 ```
 
 ## Journal Entry Format
@@ -126,10 +131,12 @@ Each iteration generates a journal with 5 sections:
 │  2. Claude tries to exit                                       │
 │  3. Stop hook intercepts:                                      │
 │     a. Generates journal entry for this iteration              │
-│     b. Updates tactical/strategic/skills context               │
-│     c. Checks for completion promise                           │
-│     d. If not complete: re-inject prompt + context             │
+│     b. Updates tactical/strategic context documents            │
+│     c. Extracts skills → .claude/skills/ (PERSISTENT!)         │
+│     d. Checks for completion promise                           │
+│     e. If not complete: re-inject prompt + context             │
 │  4. Next iteration sees accumulated knowledge                  │
+│  5. Skills auto-loaded in ALL future Claude sessions           │
 └─────────────────────────────────────────────────────────────────┘
          │
          ▼  (repeat until promise fulfilled or max iterations)
@@ -139,7 +146,8 @@ Each iteration generates a journal with 5 sections:
 
 ### Stop Hook
 - Generates journal entry after each iteration
-- Updates context documents
+- Updates tactical/strategic context documents
+- **Extracts skills** as Claude Code skill files (`.claude/skills/`)
 - Checks for completion promise
 - Re-injects prompt with accumulated context
 
@@ -162,10 +170,41 @@ Each iteration generates a journal with 5 sections:
 - Dependencies discovered
 - Risks and considerations
 
-### Skills (learned over time)
-- Patterns that work well
-- Anti-patterns to avoid
-- Useful commands and techniques
+## Claude Code Skills (Persistent!)
+
+Unlike the context documents which are loop-specific, skills are extracted as **proper Claude Code skills** in `.claude/skills/`. This means:
+
+- **Auto-loaded**: Claude automatically uses these skills in ALL future sessions
+- **Persistent**: Skills survive after the Ralph loop ends
+- **Reusable**: Skills apply across different tasks and projects
+- **Standard format**: Uses Claude Code's native skill format
+
+### How Skill Extraction Works
+
+After each iteration:
+1. Journal entries are analyzed for reusable patterns
+2. **Existing skills are checked** (full content + frontmatter) to avoid duplicates
+3. The system decides whether to:
+   - **CREATE** new skills for genuinely new patterns
+   - **UPDATE** existing skills with additional information
+   - **DO NOTHING** if no changes are needed
+4. Skills are automatically available in future Claude sessions
+
+### Skill Deduplication
+
+The extraction prompt receives full information about existing skills:
+- Skill name and path
+- Complete frontmatter (name, description)
+- Full skill content
+
+This prevents creating duplicate skills and encourages enriching existing skills with new learnings.
+
+### Example Skills That Might Be Created/Updated
+
+- `database-migrations` - How to handle schema changes in this project
+- `testing-patterns` - Testing conventions discovered (updated as new patterns emerge)
+- `error-handling` - Error handling approaches that worked
+- `git-workflow` - Git workflow for this team/project
 
 ## Requirements
 

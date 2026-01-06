@@ -44,9 +44,11 @@ STRUCTURE:
   │   ├── tactical.md       # Current goals detail (≤25KB)
   │   ├── strategic.md      # High-level direction (≤25KB)
   │   └── state.json        # Processing state
-  ├── skills/
-  │   └── SKILLS.md         # Learned capabilities
   └── loop_state.json       # Current loop state
+
+  .claude/skills/           # Claude Code skills (auto-loaded)
+  └── skill-name/
+      └── SKILL.md          # Learned skill (persistent!)
 
 EXAMPLES:
   /ralph-journal Deploy the API --completion-promise 'DEPLOYED' --max-iterations 20
@@ -92,7 +94,9 @@ if [[ -z "$PROMPT" ]]; then
 fi
 
 # Create directory structure
-mkdir -p .ralph/{journal,context,skills,agents}
+# NOTE: Skills are now created in .claude/skills/ as proper Claude Code skills
+mkdir -p .ralph/{journal,context,agents}
+mkdir -p .claude/skills
 
 # Generate loop ID
 LOOP_ID=$(date +%s)-$$
@@ -152,29 +156,12 @@ To be discovered.
 EOF
 fi
 
-if [[ ! -f .ralph/skills/SKILLS.md ]]; then
-  cat > .ralph/skills/SKILLS.md <<EOF
-# Learned Skills
-
-*Reusable patterns and lessons learned from iterations.*
-
-## Patterns That Work
-None documented yet.
-
-## Anti-Patterns to Avoid
-None documented yet.
-
-## Useful Commands
-None documented yet.
-EOF
-fi
-
 if [[ ! -f .ralph/context/state.json ]]; then
   cat > .ralph/context/state.json <<EOF
 {
   "tactical": {"last_processed_journal": null},
   "strategic": {"last_processed_journal": null},
-  "skills": {"last_processed_journal": null}
+  "skills_extracted": {"last_processed_journal": null}
 }
 EOF
 fi
@@ -191,10 +178,12 @@ Completion promise: $(if [[ "$COMPLETION_PROMISE" != "null" ]]; then echo "$COMP
 📓 Journal system initialized:
    .ralph/journal/        - Iteration diary entries
    .ralph/context/        - Tactical & strategic context
-   .ralph/skills/         - Learned capabilities
+   .claude/skills/        - Learned skills (Claude Code auto-loads)
 
-After each iteration, a journal entry will be created and context documents
-will be updated with insights from your work.
+After each iteration:
+  • Journal entry captures what happened
+  • Tactical/strategic context updated
+  • Skills extracted as Claude Code skills (persistent across sessions!)
 
 ⚠️  WARNING: Loop runs until completion promise or max iterations!
 

@@ -14,8 +14,13 @@ STATE_FILE="$RALPH_DIR/loop_state.json"
 # Change to project directory for consistent relative path handling
 cd "$PROJECT_ROOT"
 
-# Read hook input from stdin
-HOOK_INPUT=$(cat)
+# Read hook input from stdin and log it for debugging
+# The debug script logs to /tmp/hook-debug.log and passes input through unchanged
+if [[ -x "$PLUGIN_ROOT/scripts/debug-hook-input.sh" ]]; then
+  HOOK_INPUT=$(cat | "$PLUGIN_ROOT/scripts/debug-hook-input.sh")
+else
+  HOOK_INPUT=$(cat)
+fi
 
 # Check if Ralph loop is active
 if [[ ! -f "$STATE_FILE" ]]; then
@@ -117,6 +122,13 @@ echo "📚 Updating context documents..."
 "$PLUGIN_ROOT/scripts/update-context.sh" all "$RALPH_DIR" 2>/dev/null || echo "⚠️  Context update encountered issues"
 
 # ═══════════════════════════════════════════════════════════════════
+# STEP 4b: Extract Skills as Claude Code Skills
+# ═══════════════════════════════════════════════════════════════════
+
+echo "🧠 Extracting skills from journals..."
+"$PLUGIN_ROOT/scripts/extract-skills.sh" "$RALPH_DIR" "$PROJECT_ROOT/.claude/skills" 2>/dev/null || echo "⚠️  Skill extraction encountered issues"
+
+# ═══════════════════════════════════════════════════════════════════
 # STEP 5: Prepare Next Iteration
 # ═══════════════════════════════════════════════════════════════════
 
@@ -128,21 +140,23 @@ jq ".iteration = $NEXT_ITERATION" "$STATE_FILE" > "${STATE_FILE}.tmp" && mv "${S
 # Read context documents for injection
 TACTICAL=""
 STRATEGIC=""
-SKILLS=""
 
 if [[ -f "$RALPH_DIR/context/tactical.md" ]]; then
-  TACTICAL=$(cat "$RALPH_DIR/context/tactical.md" | head -c 8000)
+  TACTICAL=$(cat "$RALPH_DIR/context/tactical.md" | head -c 10000)
 fi
 
 if [[ -f "$RALPH_DIR/context/strategic.md" ]]; then
-  STRATEGIC=$(cat "$RALPH_DIR/context/strategic.md" | head -c 8000)
+  STRATEGIC=$(cat "$RALPH_DIR/context/strategic.md" | head -c 10000)
 fi
 
-if [[ -f "$RALPH_DIR/skills/SKILLS.md" ]]; then
-  SKILLS=$(cat "$RALPH_DIR/skills/SKILLS.md" | head -c 4000)
+# Count extracted skills for display
+SKILL_COUNT=0
+if [[ -d "$PROJECT_ROOT/.claude/skills" ]]; then
+  SKILL_COUNT=$(find "$PROJECT_ROOT/.claude/skills" -name "SKILL.md" 2>/dev/null | wc -l | tr -d ' ')
 fi
 
 # Build enhanced prompt with context
+# NOTE: Skills are now auto-loaded by Claude from .claude/skills/ directory
 ENHANCED_PROMPT="$PROMPT
 
 ---
@@ -154,11 +168,9 @@ $STRATEGIC
 ### Tactical Context
 $TACTICAL
 
-### Relevant Skills
-$SKILLS
-
 ---
 **Previous iteration journal:** $(basename "$JOURNAL_FILE" 2>/dev/null || echo "none")
+**Skills learned:** $SKILL_COUNT skill(s) extracted to .claude/skills/ (auto-loaded)
 **To complete:** Output <promise>$COMPLETION_PROMISE</promise> when the task is genuinely complete.
 "
 

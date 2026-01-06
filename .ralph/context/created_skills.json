@@ -1,0 +1,23 @@
+{
+  "skills": [
+    {
+      "slug": "canary-validation-pattern",
+      "name": "Canary Validation Pattern",
+      "description": "Use minimal test actions to validate system behavior before relying on infrastructure for complex workflows.",
+      "created_at": 1767719479.265792
+    },
+    {
+      "slug": "always-verify-file-operations",
+      "name": "Always Verify File Operations",
+      "description": "Explicitly verify file operations succeeded by reading back the content; never assume write operations completed successfully.",
+      "created_at": 1767719479.297971
+    },
+    {
+      "slug": "match-effort-to-task-complexity",
+      "name": "Match Effort to Task Complexity",
+      "description": "For trivial single-step tasks, execute immediately without elaborate planning, todo lists, or journal entries.",
+      "created_at": 1767719479.330367
+    }
+  ],
+  "loop_id": "1767704703-12195"
+}

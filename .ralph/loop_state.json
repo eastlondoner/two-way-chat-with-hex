@@ -1,11 +1,11 @@
 {
   "active": false,
-  "loop_id": "1767604441-15851",
+  "loop_id": "1767720642-10521",
   "iteration": 1,
-  "max_iterations": 0,
-  "completion_promise": "HOOKS_WORK",
-  "prompt": "Create a simple test file called hook-test.txt with 'Testing hooks work' in it\n",
-  "started_at": "2026-01-05T09:14:01Z",
+  "max_iterations": 5,
+  "completion_promise": "HOOK_DEBUG_COMPLETE",
+  "prompt": "Investigate the hook input JSON structure in stop-hook.sh - find out what data is available in HOOK_INPUT, document the transcript_path structure, create a debugging script that logs hook inputs to /tmp/hook-debug.log, and test it works. Finally create a summary document at docs/HOOK_INPUT_FORMAT.md\n",
+  "started_at": "2026-01-06T17:30:42Z",
   "completed": true,
-  "completed_at": 1767604629.066142
+  "completed_at": 1767720892.004676
 }
