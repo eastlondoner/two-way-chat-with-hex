@@ -81,13 +81,40 @@ server: envoy
 - WebSockets: **BLOCKED** - proxy strips `Connection: Upgrade` and `Upgrade: websocket` headers
 - Raw TCP: Only through HTTP CONNECT tunnel to port 443
 
-### Tunneling Considerations
+## Protocol Feasibility Testing Results
 
-For tools like gost, chisel, or cloudflared that need to tunnel through the proxy:
+Comprehensive testing of communication protocols through the sandbox proxy:
 
-1. **WebSocket-based tunnels**: Will fail due to header stripping
-2. **Plain HTTP Tunnels (PHT)**: Can work but require:
-   - Using the authenticated proxy URL from environment
-   - Setting `tls.insecure: true` due to MITM CA
-   - Letting proxy resolve DNS (use hostname, not IP)
-3. **Direct TCP**: Not possible; all traffic must go through HTTP CONNECT
+| Protocol | Status | Notes |
+|----------|--------|-------|
+| **Raw TCP (direct)** | ❌ BLOCKED | No direct outbound TCP connections allowed |
+| **HTTP CONNECT to port 22** | ⚠️ PARTIAL | Returns 200 OK but **no data flows** - connection hangs |
+| **HTTP CONNECT to port 443** | ✅ WORKS | Full bidirectional data flow after TLS handshake |
+| **WebSocket** | ❌ BLOCKED | `Connection: Upgrade` header stripped by proxy |
+| **HTTP/2 streams** | ✅ WORKS | ALPN negotiates h2 successfully |
+| **Chunked Transfer** | ✅ WORKS | Streaming responses received correctly |
+| **Server-Sent Events** | ✅ WORKS | Similar to chunked transfer |
+| **HTTP Long-Polling** | ⚠️ ISSUES | Connections establish but timeout after ~15s with 0 bytes transferred |
+
+### Key Findings
+
+1. **Port 443 is special**: HTTP CONNECT to port 443 allows full data flow; port 22 connects but blocks data
+2. **WebSocket blocked at header level**: The WebSocket-specific headers (`Sec-WebSocket-*`) pass through, but `Connection: Upgrade` is stripped
+3. **Long-polling problematic**: The proxy may buffer responses or timeout idle connections, breaking long-polling tunnels like gost PHT
+4. **HTTP/2 works**: Full HTTP/2 support including multiplexed streams
+
+### Viable Tunneling Options
+
+Based on testing, these approaches should work:
+
+1. **HTTP/2 bidirectional streaming** - Use gRPC or custom HTTP/2 streams
+2. **Short-polling HTTP** - Frequent small requests instead of long-polling
+3. **Chunked transfer encoding** - For server-to-client streaming
+4. **Simple HTTPS proxy** - Expose SSH as HTTPS endpoint with HTTP CONNECT
+
+### Non-Viable Options
+
+- WebSocket-based tunnels (chisel, cloudflared default mode)
+- gost PHT long-polling (timeouts)
+- Direct TCP/SSH connections
+- Raw TCP relay through HTTP CONNECT to non-443 ports
