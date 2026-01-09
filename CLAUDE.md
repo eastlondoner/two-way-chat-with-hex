@@ -121,30 +121,48 @@ Based on testing, these approaches should work:
 
 ## SSH-over-HTTP Relay Solution
 
-A working solution for SSH access from the sandbox uses short-polling HTTP relay:
+A working solution for SSH access from the sandbox uses HTTP/2 with Server-Sent Events (SSE):
 
 ### Architecture
 
 ```
-[Sandbox Client] -- HTTPS --> [Cloudflare Tunnel] --> [HTTP Relay Server] --> [SSH Server]
-                                                            ↓
-                                                      POST /ssh/send (client→server data)
-                                                      GET  /ssh/recv (server→client data)
+[Sandbox Client] -- HTTPS/HTTP2 --> [Cloudflare Tunnel] --> [HTTP Relay Server] --> [SSH Server]
+                                                                   ↓
+                                                             POST /ssh/send (client→server data)
+                                                             GET  /ssh/stream (SSE for server→client)
+                                                             GET  /ssh/recv (polling fallback)
 ```
+
+### Client Options
+
+Two relay clients are available:
+
+1. **HTTP/2 + SSE** (recommended): `ssh_http2_relay.py`
+   - Uses HTTP/2 for better performance
+   - Server-Sent Events for receiving data (lower latency)
+   - Requires `httpx` Python package
+
+2. **HTTP/1.1 Polling** (fallback): `ssh_http_relay.py`
+   - Compatible with any Python installation
+   - Uses short-polling for receiving data
 
 ### Client Configuration
 
-The relay client (`ssh_http_relay.py`) can be used as an SSH ProxyCommand:
-
 ```bash
-ssh -o ProxyCommand="python3 ssh_http_relay.py https://relay-server.example.com" user@localhost
+# HTTP/2 + SSE (preferred)
+ssh -o ProxyCommand="python3 ssh_http2_relay.py https://relay-server.example.com [api_key]" user@localhost
+
+# HTTP/1.1 Polling (fallback)
+ssh -o ProxyCommand="python3 ssh_http_relay.py https://relay-server.example.com [api_key]" user@localhost
 ```
 
 ### API Protocol
 
-- **POST /ssh/send**: Send base64-encoded data to SSH, with `X-Session-ID` header
-- **GET /ssh/recv**: Receive base64-encoded SSH response, with `X-Session-ID` header
-- **GET /health**: Health check endpoint
+- **POST /ssh/send**: Send base64-encoded data to SSH, with `X-Session-ID` and `X-API-Key` headers
+- **GET /ssh/stream**: SSE stream for receiving SSH data (format: `data: <base64>\n\n`)
+- **GET /ssh/recv**: Polling fallback - receive base64-encoded SSH response
+- **GET /health**: Health check endpoint (no auth required)
+- **GET /stats**: Server statistics (requires auth)
 
 ### GitHub Variables for Setup
 
