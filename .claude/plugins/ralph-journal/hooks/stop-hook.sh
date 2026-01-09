@@ -22,6 +22,13 @@ else
   HOOK_INPUT=$(cat)
 fi
 
+# Parse stop_hook_active flag (true when continuing from previous stop hook block)
+STOP_HOOK_ACTIVE=$(echo "$HOOK_INPUT" | jq -r '.stop_hook_active // false')
+
+if [[ "${RALPH_DEBUG:-}" == "1" ]]; then
+  echo "[stop-hook] stop_hook_active=$STOP_HOOK_ACTIVE" >&2
+fi
+
 # Check if Ralph loop is active
 if [[ ! -f "$STATE_FILE" ]]; then
   exit 0
@@ -44,6 +51,23 @@ if [[ ! "$ITERATION" =~ ^[0-9]+$ ]] || [[ ! "$MAX_ITERATIONS" =~ ^[0-9]+$ ]]; th
   echo "⚠️  Ralph Journal: State file corrupted, stopping loop" >&2
   jq '.active = false | .error = "corrupted_state"' "$STATE_FILE" > "${STATE_FILE}.tmp" && mv "${STATE_FILE}.tmp" "$STATE_FILE"
   exit 0
+fi
+
+# ═══════════════════════════════════════════════════════════════════
+# RECURSION SAFETY: Check stop_hook_active
+# ═══════════════════════════════════════════════════════════════════
+# When stop_hook_active=true, we're in a reinjection cycle. If we've
+# also hit max iterations, exit immediately to prevent edge case loops.
+
+if [[ "$STOP_HOOK_ACTIVE" == "true" ]] && [[ $MAX_ITERATIONS -gt 0 ]] && [[ $ITERATION -ge $MAX_ITERATIONS ]]; then
+  echo "🛑 Ralph Journal: Recursion safety - max iterations ($MAX_ITERATIONS) reached during reinjection" >&2
+  jq '.active = false | .reason = "recursion_safety"' "$STATE_FILE" > "${STATE_FILE}.tmp" && mv "${STATE_FILE}.tmp" "$STATE_FILE"
+  exit 0
+fi
+
+# Debug logging for iteration info
+if [[ "${RALPH_DEBUG:-}" == "1" ]]; then
+  echo "[stop-hook] iteration=$ITERATION max_iterations=$MAX_ITERATIONS" >&2
 fi
 
 # Get transcript path
