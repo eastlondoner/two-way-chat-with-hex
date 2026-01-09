@@ -2,13 +2,25 @@
 # Post-commit hook: Push Claude credentials to GitHub variable
 # This syncs credentials after each commit (in case they were refreshed)
 
+# Source portability helpers (with inline fallback for standalone use)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PORTABLE_LIB="$SCRIPT_DIR/../.claude/plugins/ralph-journal/scripts/lib/portable.sh"
+if [[ -f "$PORTABLE_LIB" ]]; then
+  source "$PORTABLE_LIB"
+else
+  _PORTABLE_OS="$(uname -s)"
+  b64_decode() { [[ "$_PORTABLE_OS" == "Darwin" ]] && base64 -D || base64 -d; }
+  b64_encode_no_wrap() { [[ "$_PORTABLE_OS" == "Darwin" ]] && base64 || base64 -w0; }
+  portable_date_iso() { date -Iseconds 2>/dev/null || date -u +"%Y-%m-%dT%H:%M:%S+00:00"; }
+fi
+
 # Logging setup
 LOG_DIR="${HOME}/.claude/logs"
 LOG_FILE="${LOG_DIR}/post-commit.log"
 mkdir -p "$LOG_DIR"
 
 log() {
-    local timestamp=$(date -Iseconds)
+    local timestamp=$(portable_date_iso)
     echo "[$timestamp] $1" | tee -a "$LOG_FILE"
 }
 
@@ -67,12 +79,12 @@ if echo "$RESPONSE" | grep -q '"value"'; then
     # Variable exists, compare timestamps
     REMOTE_VALUE=$(echo "$RESPONSE" | jq -r '.value // empty' 2>/dev/null)
     if [ -n "$REMOTE_VALUE" ]; then
-        REMOTE_EXPIRES=$(echo "$REMOTE_VALUE" | base64 -d 2>/dev/null | jq -r '.claudeAiOauth.expiresAt // 0' 2>/dev/null)
+        REMOTE_EXPIRES=$(echo "$REMOTE_VALUE" | b64_decode 2>/dev/null | jq -r '.claudeAiOauth.expiresAt // 0' 2>/dev/null)
         log "Remote credentials expiresAt: $REMOTE_EXPIRES"
 
         if [ "$REMOTE_EXPIRES" -gt "$LOCAL_EXPIRES" ] 2>/dev/null; then
             log "Remote credentials are newer (remote: $REMOTE_EXPIRES > local: $LOCAL_EXPIRES), updating local file"
-            echo "$REMOTE_VALUE" | base64 -d > ~/.claude/.credentials.json
+            echo "$REMOTE_VALUE" | b64_decode > ~/.claude/.credentials.json
             chmod 600 ~/.claude/.credentials.json
             log "Local credentials updated from GitHub"
             exit 0
@@ -84,7 +96,7 @@ else
 fi
 
 # Base64 encode credentials
-CREDS=$(cat ~/.claude/.credentials.json | base64 -w0)
+CREDS=$(cat ~/.claude/.credentials.json | b64_encode_no_wrap)
 
 # Check if variable exists (for create vs update)
 EXISTS=$(curl -s -o /dev/null -w "%{http_code}" \

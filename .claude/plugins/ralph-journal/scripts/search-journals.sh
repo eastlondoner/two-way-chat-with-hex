@@ -5,6 +5,10 @@
 
 set -uo pipefail
 
+# Source portability helpers
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/portable.sh"
+
 # Configuration
 RALPH_DIR="${RALPH_DIR:-.ralph}"
 JOURNAL_DIR="$RALPH_DIR/journal"
@@ -119,18 +123,22 @@ if [[ "$LIST_ONLY" == "true" ]]; then
 fi
 
 # Get list of matching files sorted by modification time (newest first)
+# Uses portable mtime_sort_paths to work on both macOS and Linux
+_match_arr=()
 if [[ "$CASE_INSENSITIVE" == "true" ]]; then
-  MATCHING_FILES=$(grep -l -i "$SEARCH_TERM" "$JOURNAL_DIR"/*.md 2>/dev/null | \
-    xargs -I{} stat --format='%Y %n' {} 2>/dev/null | \
-    sort -rn | \
-    cut -d' ' -f2- | \
-    head -n "$MAX_RESULTS") || true
+  while IFS= read -r line; do
+    [[ -n "$line" ]] && _match_arr+=("$line")
+  done < <(grep -l -i "$SEARCH_TERM" "$JOURNAL_DIR"/*.md 2>/dev/null || true)
 else
-  MATCHING_FILES=$(grep -l "$SEARCH_TERM" "$JOURNAL_DIR"/*.md 2>/dev/null | \
-    xargs -I{} stat --format='%Y %n' {} 2>/dev/null | \
-    sort -rn | \
-    cut -d' ' -f2- | \
-    head -n "$MAX_RESULTS") || true
+  while IFS= read -r line; do
+    [[ -n "$line" ]] && _match_arr+=("$line")
+  done < <(grep -l "$SEARCH_TERM" "$JOURNAL_DIR"/*.md 2>/dev/null || true)
+fi
+
+if [[ ${#_match_arr[@]} -gt 0 ]]; then
+  MATCHING_FILES=$(mtime_sort_paths "${_match_arr[@]}" | head -n "$MAX_RESULTS")
+else
+  MATCHING_FILES=""
 fi
 
 if [[ -z "$MATCHING_FILES" ]]; then
@@ -168,8 +176,9 @@ for file in $MATCHING_FILES; do
 
   # Extract iteration number and date from filename
   # Format: YYYY-MM-DDTHH-MM-SS_iter_NNN.md
-  ITER_NUM=$(echo "$BASENAME" | grep -oP 'iter_\K\d+' 2>/dev/null || echo "?")
-  FILE_DATE=$(echo "$BASENAME" | grep -oP '^\d{4}-\d{2}-\d{2}' 2>/dev/null || echo "unknown date")
+  # Uses portable bash regex instead of grep -oP (not available on macOS)
+  ITER_NUM=$(extract_iter_num "$BASENAME")
+  FILE_DATE=$(extract_file_date "$BASENAME")
 
   if [[ "$CASE_INSENSITIVE" == "true" ]]; then
     MATCH_COUNT=$(grep -c -i "$SEARCH_TERM" "$file" 2>/dev/null || echo "0")

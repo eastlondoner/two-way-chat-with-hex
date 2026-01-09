@@ -6,6 +6,10 @@
 set -euo pipefail
 
 PLUGIN_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+
+# Source portability helpers
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/portable.sh"
 RALPH_DIR="${1:-.ralph}"
 PROJECT_SKILLS_DIR="${2:-.claude/skills}"
 STATE_FILE="$RALPH_DIR/context/state.json"
@@ -172,7 +176,7 @@ TEMP_FILE=$(mktemp)
         CLAUDE_CODE_WEBSOCKET_AUTH_FILE_DESCRIPTOR
 
   cd /tmp
-  echo "$EXTRACT_PROMPT" | timeout 180 claude -p --model sonnet --output-format text > "$TEMP_FILE" 2>/dev/null
+  echo "$EXTRACT_PROMPT" | portable_timeout 180 claude -p --model sonnet --output-format text > "$TEMP_FILE" 2>/dev/null
 ) || {
   echo "[skills] Extraction failed"
   rm -f "$TEMP_FILE"

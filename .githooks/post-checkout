@@ -2,6 +2,17 @@
 # Post-checkout hook: Pull Claude credentials from GitHub variable
 # This runs after `git clone` and `git checkout`
 
+# Source portability helpers (with inline fallback for standalone use)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PORTABLE_LIB="$SCRIPT_DIR/../.claude/plugins/ralph-journal/scripts/lib/portable.sh"
+if [[ -f "$PORTABLE_LIB" ]]; then
+  source "$PORTABLE_LIB"
+else
+  _PORTABLE_OS="$(uname -s)"
+  b64_decode() { [[ "$_PORTABLE_OS" == "Darwin" ]] && base64 -D || base64 -d; }
+  portable_date_iso() { date -Iseconds 2>/dev/null || date -u +"%Y-%m-%dT%H:%M:%S+00:00"; }
+fi
+
 # Ensure ~/.claude directory exists
 mkdir -p "${HOME}/.claude"
 
@@ -11,7 +22,7 @@ LOG_FILE="${LOG_DIR}/post-checkout.log"
 mkdir -p "$LOG_DIR"
 
 log() {
-    local timestamp=$(date -Iseconds)
+    local timestamp=$(portable_date_iso)
     echo "[$timestamp] $1" | tee -a "$LOG_FILE"
 }
 
@@ -110,7 +121,7 @@ fi
 
 # Write credentials to Claude config
 mkdir -p ~/.claude
-echo "$VALUE" | base64 -d > ~/.claude/.credentials.json
+echo "$VALUE" | b64_decode > ~/.claude/.credentials.json
 chmod 600 ~/.claude/.credentials.json
 
 log "Credentials restored successfully to ~/.claude/.credentials.json"

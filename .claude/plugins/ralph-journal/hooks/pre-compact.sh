@@ -6,6 +6,9 @@
 set -euo pipefail
 
 PLUGIN_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+
+# Source portability helpers
+source "$PLUGIN_ROOT/scripts/lib/portable.sh"
 # Derive project root from plugin path (.claude/plugins/ralph-journal -> project root)
 PROJECT_ROOT="$(cd "$PLUGIN_ROOT/../../.." && pwd)"
 RALPH_DIR="$PROJECT_ROOT/.ralph"
@@ -75,7 +78,7 @@ Output ONLY the markdown content.
         CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR \
         CLAUDE_CODE_WEBSOCKET_AUTH_FILE_DESCRIPTOR
 
-  echo "$JOURNAL_PROMPT" | timeout 90 claude -p --model sonnet --output-format text > "$JOURNAL_FILE" 2>/dev/null
+  echo "$JOURNAL_PROMPT" | portable_timeout 90 claude -p --model sonnet --output-format text > "$JOURNAL_FILE" 2>/dev/null
 ) || {
   # Fallback if generation fails
   cat > "$JOURNAL_FILE" <<EOF

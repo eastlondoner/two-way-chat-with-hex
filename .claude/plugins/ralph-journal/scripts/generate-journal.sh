@@ -5,6 +5,10 @@
 
 set -euo pipefail
 
+# Source portability helpers
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/portable.sh"
+
 # Arguments
 TRANSCRIPT_PATH="${1:-}"
 LOOP_STATE_PATH="${2:-.ralph/loop_state.json}"
@@ -106,7 +110,7 @@ Output ONLY the markdown content, no preamble.
         CLAUDE_CODE_WEBSOCKET_AUTH_FILE_DESCRIPTOR
 
   cd /tmp
-  echo "$JOURNAL_PROMPT" | timeout 120 claude -p --model sonnet --output-format text > "$JOURNAL_FILE" 2>/dev/null
+  echo "$JOURNAL_PROMPT" | portable_timeout 120 claude -p --model sonnet --output-format text > "$JOURNAL_FILE" 2>/dev/null
 ) || {
   # Fallback if claude -p fails - create minimal journal
   cat > "$JOURNAL_FILE" <<EOF

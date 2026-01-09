@@ -6,6 +6,10 @@
 
 set -euo pipefail
 
+# Source portability helpers
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/portable.sh"
+
 CONTEXT_TYPE="${1:-all}"  # tactical, strategic, or all
 RALPH_DIR="${2:-.ralph}"
 MAX_CHARS=25600
@@ -128,7 +132,7 @@ Focus on: $PROMPT_FOCUS"
           CLAUDE_CODE_WEBSOCKET_AUTH_FILE_DESCRIPTOR
 
     cd /tmp
-    echo "$UPDATE_PROMPT" | timeout 120 claude -p --model sonnet --output-format text > "$TEMP_FILE" 2>/dev/null
+    echo "$UPDATE_PROMPT" | portable_timeout 120 claude -p --model sonnet --output-format text > "$TEMP_FILE" 2>/dev/null
   ) || {
     echo "[$DOC_TYPE] Update failed, keeping current document"
     rm -f "$TEMP_FILE"
