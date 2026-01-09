@@ -118,3 +118,56 @@ Based on testing, these approaches should work:
 - gost PHT long-polling (timeouts)
 - Direct TCP/SSH connections
 - Raw TCP relay through HTTP CONNECT to non-443 ports
+
+## SSH-over-HTTP Relay Solution
+
+A working solution for SSH access from the sandbox uses short-polling HTTP relay:
+
+### Architecture
+
+```
+[Sandbox Client] -- HTTPS --> [Cloudflare Tunnel] --> [HTTP Relay Server] --> [SSH Server]
+                                                            ↓
+                                                      POST /ssh/send (client→server data)
+                                                      GET  /ssh/recv (server→client data)
+```
+
+### Client Configuration
+
+The relay client (`ssh_http_relay.py`) can be used as an SSH ProxyCommand:
+
+```bash
+ssh -o ProxyCommand="python3 ssh_http_relay.py https://relay-server.example.com" user@localhost
+```
+
+### API Protocol
+
+- **POST /ssh/send**: Send base64-encoded data to SSH, with `X-Session-ID` header
+- **GET /ssh/recv**: Receive base64-encoded SSH response, with `X-Session-ID` header
+- **GET /health**: Health check endpoint
+
+### GitHub Variables for Setup
+
+Configure these variables in the repository to enable SSH relay:
+
+- `CLAUDE_SSH_KEY`: Base64-encoded private SSH key
+- `CLAUDE_SSH_RELAY_URL`: URL of the HTTP relay server (e.g., `https://m1.gptkids.app`)
+- `CLAUDE_DESKTOP_USER`: SSH username
+- `CLAUDE_DESKTOP_HOST`: Desktop hostname (used for non-relay connections)
+
+### Post-Checkout Hook Integration
+
+The `.githooks/post-checkout` script automatically:
+1. Fetches SSH key and relay URL from GitHub variables
+2. Copies `ssh_http_relay.py` to `~/.ssh/`
+3. Configures SSH config with ProxyCommand when in remote environment
+
+### Usage
+
+Once configured, connect to the desktop with:
+
+```bash
+ssh desktop
+# or with command
+ssh desktop "hostname; uname -a"
+```

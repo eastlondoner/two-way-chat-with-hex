@@ -153,10 +153,39 @@ setup_ssh_desktop_key() {
         "https://api.github.com/repos/$REPO/actions/variables/CLAUDE_DESKTOP_USER" 2>/dev/null || echo "")
     DESKTOP_USER=$(echo "$DESKTOP_USER_RESPONSE" | jq -r '.value // empty' 2>/dev/null)
 
+    # Fetch SSH relay URL from GitHub variable (for sandboxed environments)
+    RELAY_URL_RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+        -H "Accept: application/vnd.github.v3+json" \
+        "https://api.github.com/repos/$REPO/actions/variables/CLAUDE_SSH_RELAY_URL" 2>/dev/null || echo "")
+    RELAY_URL=$(echo "$RELAY_URL_RESPONSE" | jq -r '.value // empty' 2>/dev/null)
+
+    # Copy the relay script to ~/.ssh if it exists
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    if [ -f "$SCRIPT_DIR/ssh_http_relay.py" ]; then
+        cp "$SCRIPT_DIR/ssh_http_relay.py" ~/.ssh/ssh_http_relay.py
+        chmod +x ~/.ssh/ssh_http_relay.py
+        log "Copied ssh_http_relay.py to ~/.ssh/"
+    fi
+
     # Add to SSH config if not already present
     if [ ! -f ~/.ssh/config ] || ! grep -q "IdentityFile.*claude_desktop_key" ~/.ssh/config; then
         if [ -n "$DESKTOP_HOST" ] && [ -n "$DESKTOP_USER" ]; then
-            cat >> ~/.ssh/config << SSHCONFIG
+            # Check if we need HTTP relay (sandboxed environment with relay URL configured)
+            if [ -n "$RELAY_URL" ] && [ "$CLAUDE_CODE_REMOTE" = "true" ]; then
+                cat >> ~/.ssh/config << SSHCONFIG
+
+# Claude desktop access via HTTP relay (for sandboxed environments)
+Host desktop
+    HostName localhost
+    User ${DESKTOP_USER}
+    IdentityFile ~/.ssh/claude_desktop_key
+    StrictHostKeyChecking no
+    UserKnownHostsFile /dev/null
+    ProxyCommand python3 ~/.ssh/ssh_http_relay.py ${RELAY_URL}
+SSHCONFIG
+                log "Added desktop SSH config with HTTP relay (relay: $RELAY_URL, user: $DESKTOP_USER)"
+            else
+                cat >> ~/.ssh/config << SSHCONFIG
 
 # Claude desktop access key
 Host desktop
@@ -166,7 +195,8 @@ Host desktop
     StrictHostKeyChecking accept-new
     UserKnownHostsFile ~/.ssh/known_hosts
 SSHCONFIG
-            log "Added desktop SSH config (host: $DESKTOP_HOST, user: $DESKTOP_USER)"
+                log "Added desktop SSH config (host: $DESKTOP_HOST, user: $DESKTOP_USER)"
+            fi
         else
             cat >> ~/.ssh/config << 'SSHCONFIG'
 
