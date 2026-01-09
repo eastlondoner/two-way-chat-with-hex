@@ -1,0 +1,59 @@
+name: Plugin Test Suite
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - '.claude/plugins/ralph-journal/**'
+      - '.github/workflows/test-plugin.yml'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - '.claude/plugins/ralph-journal/**'
+      - '.github/workflows/test-plugin.yml'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  test:
+    name: Test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install jq
+
+      - name: Verify dependencies
+        run: |
+          echo "Checking installed tools..."
+          bash --version
+          jq --version || echo "jq not found"
+          grep --version || echo "grep version info not available"
+
+      - name: Run plugin test suite
+        run: |
+          cd .claude/plugins/ralph-journal/tests
+          bash test-search-journals.sh
+
+      - name: Test results summary
+        if: always()
+        run: |
+          if [ ${{ job.status }} == 'success' ]; then
+            echo "✅ All tests passed on ${{ matrix.os }}"
+          else
+            echo "❌ Some tests failed on ${{ matrix.os }}"
+          fi
