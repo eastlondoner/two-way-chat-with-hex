@@ -29,8 +29,8 @@ ssh desktop "zsh -l -c '/opt/homebrew/bin/tmux list-sessions'"
 ### Send Queries
 
 ```bash
-# Send query (double Enter to submit)
-ssh desktop "zsh -l -c '/opt/homebrew/bin/tmux send-keys -t claude-desktop \"your query here\" Enter Enter'"
+# Send query using -l (literal) flag - IMPORTANT: -l is required!
+ssh desktop "zsh -l -c '/opt/homebrew/bin/tmux send-keys -t claude-desktop -l \"your query here\" && /opt/homebrew/bin/tmux send-keys -t claude-desktop Enter'"
 
 # Wait and capture response
 sleep 15
@@ -42,7 +42,7 @@ ssh desktop "zsh -l -c '/opt/homebrew/bin/tmux capture-pane -t claude-desktop -p
 | Action | Command |
 |--------|---------|
 | Check status | `ssh desktop "zsh -l -c '/opt/homebrew/bin/tmux capture-pane -t claude-desktop -p -S -30'"` |
-| Send query | `ssh desktop "zsh -l -c '/opt/homebrew/bin/tmux send-keys -t claude-desktop \"text\" Enter Enter'"` |
+| Send query | `ssh desktop "zsh -l -c '/opt/homebrew/bin/tmux send-keys -t claude-desktop -l \"text\" && /opt/homebrew/bin/tmux send-keys -t claude-desktop Enter'"` |
 | List sessions | `ssh desktop "zsh -l -c '/opt/homebrew/bin/tmux list-sessions'"` |
 | Kill session | `ssh desktop "zsh -l -c '/opt/homebrew/bin/tmux kill-session -t claude-desktop'"` |
 
@@ -51,9 +51,9 @@ ssh desktop "zsh -l -c '/opt/homebrew/bin/tmux capture-pane -t claude-desktop -p
 For convenience, add these to your workflow:
 
 ```bash
-# Send command to desktop Claude
+# Send command to desktop Claude (uses -l for literal mode)
 desktop_claude_send() {
-    ssh desktop "zsh -l -c '/opt/homebrew/bin/tmux send-keys -t claude-desktop \"$1\" Enter Enter'"
+    ssh desktop "zsh -l -c '/opt/homebrew/bin/tmux send-keys -t claude-desktop -l \"$1\" && /opt/homebrew/bin/tmux send-keys -t claude-desktop Enter'"
 }
 
 # Get desktop Claude output
@@ -69,6 +69,12 @@ desktop_claude_query() {
 }
 ```
 
+## Important Notes
+
+- **Always use `-l` flag** with `send-keys` for query text. Without it, special characters are interpreted as tmux key bindings.
+- **Single Enter** is sufficient to submit queries (not double Enter).
+- The `-l` flag sends keys "literally" without interpretation.
+
 ## Authentication
 
 The desktop Claude may need authentication:
@@ -79,7 +85,7 @@ The desktop Claude may need authentication:
 
 ```bash
 # Start login flow
-ssh desktop "zsh -l -c '/opt/homebrew/bin/tmux send-keys -t claude-desktop \"/login\" Enter'"
+ssh desktop "zsh -l -c '/opt/homebrew/bin/tmux send-keys -t claude-desktop -l \"/login\" && /opt/homebrew/bin/tmux send-keys -t claude-desktop Enter'"
 sleep 3
 ssh desktop "zsh -l -c '/opt/homebrew/bin/tmux capture-pane -t claude-desktop -p -S -30'"
 ```
