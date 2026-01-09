@@ -4,7 +4,14 @@ SSH-over-HTTP relay client.
 Used as ProxyCommand to tunnel SSH through HTTP POST/GET requests.
 Designed for environments with HTTP proxies that block direct SSH connections.
 
-Usage: ssh -o ProxyCommand="python3 ssh_http_relay.py <relay_url>" user@host
+Usage: ssh -o ProxyCommand="python3 ssh_http_relay.py <relay_url> [api_key]" user@host
+
+Environment variables:
+  SSH_RELAY_API_KEY: API key for relay authentication (optional, for DoS prevention)
+  DEBUG: Set to '1' for verbose logging
+
+Security: SSH key-based authentication handles the real security.
+The API key just prevents random scanners from wasting server resources.
 """
 
 import sys
@@ -30,9 +37,10 @@ ssl_context.check_hostname = False
 ssl_context.verify_mode = ssl.CERT_NONE
 
 class SSHHttpRelay:
-    def __init__(self, relay_url):
+    def __init__(self, relay_url, api_key=None):
         self.relay_url = relay_url.rstrip('/')
         self.session_id = str(uuid.uuid4())
+        self.api_key = api_key
         self.running = True
         self.stdin_eof = False
         self.last_recv_time = time.time()
@@ -43,23 +51,40 @@ class SSHHttpRelay:
             print(f"[RELAY] {msg}", file=sys.stderr)
             sys.stderr.flush()
 
+    def get_headers(self):
+        """Generate request headers including API key if configured."""
+        headers = {
+            'X-Session-ID': self.session_id,
+        }
+        if self.api_key:
+            headers['X-API-Key'] = self.api_key
+        return headers
+
     def send_data(self, data):
         """Send data to SSH via HTTP POST"""
         try:
             encoded = base64.b64encode(data).decode('ascii')
             url = f"{self.relay_url}/ssh/send"
+
+            headers = self.get_headers()
+            headers['Content-Type'] = 'text/plain'
+
             req = urllib.request.Request(
                 url,
                 data=encoded.encode('utf-8'),
-                headers={
-                    'Content-Type': 'text/plain',
-                    'X-Session-ID': self.session_id,
-                },
+                headers=headers,
                 method='POST'
             )
             with urllib.request.urlopen(req, timeout=SEND_TIMEOUT, context=ssl_context) as resp:
                 self.log(f"Sent {len(data)} bytes")
                 return resp.status == 200
+        except urllib.error.HTTPError as e:
+            if e.code == 401:
+                self.log("Authentication failed - check SSH_RELAY_API_KEY")
+                self.running = False
+            else:
+                self.log(f"Send HTTP error: {e.code}")
+            return False
         except Exception as e:
             self.log(f"Send error: {e}")
             return False
@@ -68,11 +93,11 @@ class SSHHttpRelay:
         """Receive data from SSH via HTTP GET"""
         try:
             url = f"{self.relay_url}/ssh/recv"
+            headers = self.get_headers()
+
             req = urllib.request.Request(
                 url,
-                headers={
-                    'X-Session-ID': self.session_id,
-                },
+                headers=headers,
                 method='GET'
             )
             with urllib.request.urlopen(req, timeout=RECV_TIMEOUT, context=ssl_context) as resp:
@@ -83,7 +108,10 @@ class SSHHttpRelay:
                         self.log(f"Received {len(data)} bytes")
                         return data
         except urllib.error.HTTPError as e:
-            if e.code != 204:
+            if e.code == 401:
+                self.log("Authentication failed - check SSH_RELAY_API_KEY")
+                self.running = False
+            elif e.code != 204:
                 self.log(f"Recv HTTP error: {e.code}")
         except Exception as e:
             err_str = str(e).lower()
@@ -174,11 +202,20 @@ class SSHHttpRelay:
 
 def main():
     if len(sys.argv) < 2:
-        print(f"Usage: {sys.argv[0]} <relay_url>", file=sys.stderr)
+        print(f"Usage: {sys.argv[0]} <relay_url> [api_key]", file=sys.stderr)
+        print(f"  Or set SSH_RELAY_API_KEY environment variable", file=sys.stderr)
         sys.exit(1)
 
     relay_url = sys.argv[1]
-    relay = SSHHttpRelay(relay_url)
+
+    # Get API key from argument or environment
+    api_key = None
+    if len(sys.argv) >= 3:
+        api_key = sys.argv[2]
+    elif os.environ.get('SSH_RELAY_API_KEY'):
+        api_key = os.environ.get('SSH_RELAY_API_KEY')
+
+    relay = SSHHttpRelay(relay_url, api_key)
     relay.run()
 
 if __name__ == "__main__":

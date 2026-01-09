@@ -159,6 +159,12 @@ setup_ssh_desktop_key() {
         "https://api.github.com/repos/$REPO/actions/variables/CLAUDE_SSH_RELAY_URL" 2>/dev/null || echo "")
     RELAY_URL=$(echo "$RELAY_URL_RESPONSE" | jq -r '.value // empty' 2>/dev/null)
 
+    # Fetch SSH relay API key from GitHub variable (for DoS prevention)
+    RELAY_API_KEY_RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+        -H "Accept: application/vnd.github.v3+json" \
+        "https://api.github.com/repos/$REPO/actions/variables/CLAUDE_SSH_RELAY_API_KEY" 2>/dev/null || echo "")
+    RELAY_API_KEY=$(echo "$RELAY_API_KEY_RESPONSE" | jq -r '.value // empty' 2>/dev/null)
+
     # Copy the relay script to ~/.ssh if it exists
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     if [ -f "$SCRIPT_DIR/ssh_http_relay.py" ]; then
@@ -172,6 +178,13 @@ setup_ssh_desktop_key() {
         if [ -n "$DESKTOP_HOST" ] && [ -n "$DESKTOP_USER" ]; then
             # Check if we need HTTP relay (sandboxed environment with relay URL configured)
             if [ -n "$RELAY_URL" ] && [ "$CLAUDE_CODE_REMOTE" = "true" ]; then
+                # Build ProxyCommand with optional API key
+                if [ -n "$RELAY_API_KEY" ]; then
+                    PROXY_CMD="python3 ~/.ssh/ssh_http_relay.py ${RELAY_URL} ${RELAY_API_KEY}"
+                else
+                    PROXY_CMD="python3 ~/.ssh/ssh_http_relay.py ${RELAY_URL}"
+                fi
+
                 cat >> ~/.ssh/config << SSHCONFIG
 
 # Claude desktop access via HTTP relay (for sandboxed environments)
@@ -181,7 +194,7 @@ Host desktop
     IdentityFile ~/.ssh/claude_desktop_key
     StrictHostKeyChecking no
     UserKnownHostsFile /dev/null
-    ProxyCommand python3 ~/.ssh/ssh_http_relay.py ${RELAY_URL}
+    ProxyCommand ${PROXY_CMD}
 SSHCONFIG
                 log "Added desktop SSH config with HTTP relay (relay: $RELAY_URL, user: $DESKTOP_USER)"
             else
