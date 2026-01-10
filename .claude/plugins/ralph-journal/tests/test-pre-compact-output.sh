@@ -72,8 +72,9 @@ HOOKIN
 )
   
   # Run hook with short timeout to avoid hanging on Claude calls
+  # Only capture stdout - stderr goes to /dev/null since we only care about JSON output
   cd "$TEST_PROJECT"
-  local OUTPUT=$(portable_timeout 10 bash "$PRE_COMPACT_HOOK" <<< "$HOOK_INPUT" 2>&1 || echo '{"continue": true}')
+  local OUTPUT=$(portable_timeout 10 bash "$PRE_COMPACT_HOOK" <<< "$HOOK_INPUT" 2>/dev/null || echo '{"continue": true}')
   
   # Test: Output should be valid JSON
   if ! echo "$OUTPUT" | jq . >/dev/null 2>&1; then
