@@ -61,11 +61,27 @@ if [[ "$(uname -s)" == "Linux" ]] && ! command -v gh &> /dev/null; then
     log "Installing GitHub CLI (required for git credential auth on Linux)..."
     GH_VERSION=$(curl -s https://api.github.com/repos/cli/cli/releases/latest | jq -r '.tag_name' | sed 's/^v//')
     if [ -n "$GH_VERSION" ] && [ "$GH_VERSION" != "null" ]; then
-        curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz" -o /tmp/gh.tar.gz && \
-        tar -xzf /tmp/gh.tar.gz -C /tmp && \
-        sudo mv /tmp/gh_${GH_VERSION}_linux_amd64/bin/gh /usr/local/bin/ && \
-        rm -rf /tmp/gh.tar.gz /tmp/gh_${GH_VERSION}_linux_amd64
-        log "GitHub CLI v${GH_VERSION} installed successfully"
+        # Download and extract - track success before attempting install
+        if curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz" -o /tmp/gh.tar.gz && \
+           tar -xzf /tmp/gh.tar.gz -C /tmp; then
+            # Try to install to /usr/local/bin (works if root or writable), otherwise add to PATH
+            if mv /tmp/gh_${GH_VERSION}_linux_amd64/bin/gh /usr/local/bin/ 2>/dev/null; then
+                rm -rf /tmp/gh.tar.gz /tmp/gh_${GH_VERSION}_linux_amd64
+                log "GitHub CLI v${GH_VERSION} installed to /usr/local/bin"
+            else
+                # Fallback: keep in /tmp and add to PATH
+                rm -f /tmp/gh.tar.gz  # Clean up tarball
+                export PATH="/tmp/gh_${GH_VERSION}_linux_amd64/bin:$PATH"
+                # Only add to bashrc if not already present (idempotency)
+                if ! grep -q "gh_.*_linux_amd64/bin" ~/.bashrc 2>/dev/null; then
+                    echo "export PATH=\"/tmp/gh_${GH_VERSION}_linux_amd64/bin:\$PATH\"" >> ~/.bashrc
+                fi
+                log "GitHub CLI v${GH_VERSION} added to PATH (kept in /tmp)"
+            fi
+        else
+            log "Failed to download or extract GitHub CLI, continuing without gh"
+            rm -f /tmp/gh.tar.gz  # Clean up any partial download
+        fi
     else
         log "Could not determine gh version, continuing without gh"
     fi
