@@ -55,23 +55,6 @@ if [ -z "$GITHUB_TOKEN" ]; then
     exit 0
 fi
 
-# Install gh CLI if not available
-if ! command -v gh &> /dev/null; then
-    log "Installing GitHub CLI..."
-    GH_VERSION=$(curl -s https://api.github.com/repos/cli/cli/releases/latest | jq -r '.tag_name' | sed 's/^v//')
-    if [ -n "$GH_VERSION" ] && [ "$GH_VERSION" != "null" ]; then
-        curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz" -o /tmp/gh.tar.gz && \
-        tar -xzf /tmp/gh.tar.gz -C /tmp && \
-        sudo mv /tmp/gh_${GH_VERSION}_linux_amd64/bin/gh /usr/local/bin/ && \
-        rm -rf /tmp/gh.tar.gz /tmp/gh_${GH_VERSION}_linux_amd64
-        log "GitHub CLI v${GH_VERSION} installed successfully"
-    else
-        log "Could not determine gh version, continuing without gh"
-    fi
-else
-    log "GitHub CLI already installed: $(gh --version | head -1)"
-fi
-
 # Get repo info from git remote
 REPO_URL=$(git remote get-url origin 2>/dev/null || echo "")
 if [ -z "$REPO_URL" ]; then
@@ -150,7 +133,7 @@ setup_ssh_desktop_key() {
     mkdir -p ~/.ssh
     chmod 700 ~/.ssh
 
-    echo "$SSH_KEY_B64" | base64 -d > ~/.ssh/claude_desktop_key
+    echo "$SSH_KEY_B64" | b64_decode > ~/.ssh/claude_desktop_key
     chmod 600 ~/.ssh/claude_desktop_key
 
     # Fetch desktop host and user from GitHub variables
