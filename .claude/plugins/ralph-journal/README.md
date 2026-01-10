@@ -19,7 +19,7 @@ Ralph Journal extends the original Ralph Wiggum technique (continuous self-refer
 | `/ralph-journal <prompt>` | Start a Ralph loop with journal system |
 | `/cancel-ralph` | Cancel active loop (preserves journals) |
 | `/search-journals <query>` | Search journal history |
-| `/ralph-journal:help` | Show help and documentation |
+| `/help` | Show help and documentation |
 
 ## Usage
 
@@ -63,7 +63,7 @@ The `/search-journals` command provides powerful search capabilities across all 
 |--------|-------------|
 | `-c, --context N` | Lines of context around matches (default: 3) |
 | `-n, --max-results N` | Maximum matching files to show (default: 10) |
-| `-i, --case-sensitive` | Make search case-sensitive (default: case-insensitive) |
+| `-s, --case-sensitive` | Make search case-sensitive (default: case-insensitive) |
 | `-l, --list-only` | Only list matching files, don't show content |
 | `-d, --dir DIR` | Ralph directory (default: .ralph) |
 
@@ -91,11 +91,14 @@ Search results include:
 ├── journal/                    # One file per iteration
 │   ├── 2026-01-04T12-00-00_iter_001.md
 │   ├── 2026-01-04T12-05-00_iter_002.md
+│   ├── 2026-01-04T12-10-00_compaction_auto.md   # Pre-compaction snapshot
 │   └── ...
 ├── context/
 │   ├── tactical.md             # Current goals/details
 │   ├── strategic.md            # High-level direction
 │   └── state.json              # Processing state
+├── logs/                       # Diagnostic logs (see LOGGING.md)
+├── agents/                     # Reserved for future multi-agent coordination
 └── loop_state.json             # Loop configuration
 
 .claude/skills/                 # Claude Code skills (AUTO-LOADED!)
@@ -104,6 +107,29 @@ Search results include:
 ├── error-handling-patterns/
 │   └── SKILL.md
 └── ...                         # Skills persist across all sessions
+```
+
+### Version Control
+
+The `.ralph/` directory can be committed to source control depending on your workflow:
+
+**Commit `.ralph/` when:**
+- You want to preserve learning history across sessions and team members
+- Journal entries contain valuable project documentation
+- You're using Ralph for long-running projects where context matters
+
+**Add `.ralph/` to `.gitignore` when:**
+- Journals contain sensitive or temporary information
+- You prefer fresh context each session
+- Storage size is a concern (journals can accumulate)
+
+**Recommended `.gitignore` entries if excluding:**
+```
+.ralph/journal/
+.ralph/logs/
+.ralph/loop_state.json
+# Keep context documents if desired:
+# !.ralph/context/
 ```
 
 ## Journal Entry Format
@@ -152,9 +178,16 @@ Each iteration generates a journal with 5 sections:
 - Re-injects prompt with accumulated context
 
 ### PreCompact Hook
-- Generates journal entry before context compaction
-- Preserves insights that would otherwise be lost
-- Updates context documents
+
+Fires when Claude's context is about to be compacted (summarized to free up space).
+
+- **Generates a compaction journal** - Named `{timestamp}_compaction_{trigger}.md` where trigger is `auto` or `manual`
+- **Captures key decisions** - Preserves important technical details before they're summarized away
+- **Records unresolved questions** - Documents what still needs investigation
+- **Updates context documents** - Refreshes tactical/strategic context with latest insights
+- **Extracts skills** - Saves any new patterns as Claude Code skills
+
+This ensures valuable insights aren't lost when the conversation gets too long and Claude compacts its context.
 
 ## Context Documents
 
@@ -205,6 +238,23 @@ This prevents creating duplicate skills and encourages enriching existing skills
 - `testing-patterns` - Testing conventions discovered (updated as new patterns emerge)
 - `error-handling` - Error handling approaches that worked
 - `git-workflow` - Git workflow for this team/project
+
+## Troubleshooting
+
+Diagnostic logs are written to `.ralph/logs/` for debugging:
+
+```bash
+# View skill extraction activity
+tail -f .ralph/logs/skills.log
+
+# View context update operations
+tail -f .ralph/logs/context.log
+
+# View all logs
+tail -f .ralph/logs/*.log
+```
+
+See [LOGGING.md](LOGGING.md) for details.
 
 ## Requirements
 

@@ -26,7 +26,7 @@ Options:
   -d, --dir DIR       Ralph directory (default: .ralph)
   -c, --context N     Lines of context around matches (default: 3)
   -n, --max-results N Maximum number of matching files to show (default: 10)
-  -i, --case-sensitive  Make search case-sensitive (default: case-insensitive)
+  -s, --case-sensitive  Make search case-sensitive (default: case-insensitive)
   -l, --list-only     Only list matching files, don't show content
   -h, --help          Show this help message
 
@@ -60,7 +60,7 @@ while [[ $# -gt 0 ]]; do
       MAX_RESULTS="$2"
       shift 2
       ;;
-    -i|--case-sensitive)
+    -s|--case-sensitive)
       CASE_INSENSITIVE=false
       shift
       ;;

@@ -101,7 +101,7 @@ if ! grep -q "^# " "$JOURNAL_FILE" 2>/dev/null; then
   mv "$TEMP" "$JOURNAL_FILE"
 fi
 
-echo "📓 Pre-compaction journal saved: $(basename "$JOURNAL_FILE")"
+echo "📓 Pre-compaction journal saved: $(basename "$JOURNAL_FILE")" >&2
 
 # Update context documents with new journal entry (logs to .ralph/logs/context.log)
 "$PLUGIN_ROOT/scripts/update-context.sh" all "$RALPH_DIR" || true
