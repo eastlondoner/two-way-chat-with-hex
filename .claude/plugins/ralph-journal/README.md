@@ -91,11 +91,13 @@ Search results include:
 ├── journal/                    # One file per iteration
 │   ├── 2026-01-04T12-00-00_iter_001.md
 │   ├── 2026-01-04T12-05-00_iter_002.md
+│   ├── 2026-01-04T12-10-00_compaction_auto.md   # Pre-compaction snapshot
 │   └── ...
 ├── context/
 │   ├── tactical.md             # Current goals/details
 │   ├── strategic.md            # High-level direction
 │   └── state.json              # Processing state
+├── agents/                     # Reserved for future multi-agent coordination
 └── loop_state.json             # Loop configuration
 
 .claude/skills/                 # Claude Code skills (AUTO-LOADED!)
@@ -152,9 +154,16 @@ Each iteration generates a journal with 5 sections:
 - Re-injects prompt with accumulated context
 
 ### PreCompact Hook
-- Generates journal entry before context compaction
-- Preserves insights that would otherwise be lost
-- Updates context documents
+
+Fires when Claude's context is about to be compacted (summarized to free up space).
+
+- **Generates a compaction journal** - Named `{timestamp}_compaction_{trigger}.md` where trigger is `auto` or `manual`
+- **Captures key decisions** - Preserves important technical details before they're summarized away
+- **Records unresolved questions** - Documents what still needs investigation
+- **Updates context documents** - Refreshes tactical/strategic context with latest insights
+- **Extracts skills** - Saves any new patterns as Claude Code skills
+
+This ensures valuable insights aren't lost when the conversation gets too long and Claude compacts its context.
 
 ## Context Documents
 

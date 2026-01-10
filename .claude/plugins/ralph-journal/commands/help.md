@@ -23,11 +23,13 @@ This creates a **learning loop** where Claude improves over iterations by buildi
 .ralph/
 ├── journal/                    # Diary entries (one per iteration)
 │   ├── 2026-01-04T12-00-00_iter_001.md
+│   ├── 2026-01-04T12-10-00_compaction_auto.md  # Pre-compaction snapshot
 │   └── ...
 ├── context/
 │   ├── tactical.md             # Current details (≤25KB)
 │   ├── strategic.md            # High-level direction (≤25KB)
 │   └── state.json              # Processing state
+├── agents/                     # Reserved for future use
 └── loop_state.json             # Loop configuration
 
 .claude/skills/                 # Claude Code skills (AUTO-LOADED!)
