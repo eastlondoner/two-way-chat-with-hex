@@ -28,9 +28,12 @@ This creates a **learning loop** where Claude improves over iterations by buildi
 │   ├── tactical.md             # Current details (≤25KB)
 │   ├── strategic.md            # High-level direction (≤25KB)
 │   └── state.json              # Processing state
-├── skills/
-│   └── SKILLS.md               # Learned patterns
 └── loop_state.json             # Loop configuration
+
+.claude/skills/                 # Claude Code skills (AUTO-LOADED!)
+├── skill-name/
+│   └── SKILL.md                # Persistent across sessions
+└── ...
 ```
 
 ## Journal Entry Format
@@ -80,10 +83,12 @@ Search through journal entries for relevant context.
 - Dependencies and risks
 - Timeline implications
 
-### Skills (SKILLS.md)
+### Claude Code Skills (.claude/skills/)
+- Extracted as **proper Claude Code skills** (auto-loaded in all sessions)
 - Patterns that worked well
 - Anti-patterns to avoid
 - Useful commands/techniques
+- **Persistent** across Ralph loops and all Claude sessions
 
 ## When to Use Ralph Journal
 

@@ -19,7 +19,7 @@ Ralph Journal extends the original Ralph Wiggum technique (continuous self-refer
 | `/ralph-journal <prompt>` | Start a Ralph loop with journal system |
 | `/cancel-ralph` | Cancel active loop (preserves journals) |
 | `/search-journals <query>` | Search journal history |
-| `/ralph-journal:help` | Show help and documentation |
+| `/help` | Show help and documentation |
 
 ## Usage
 
