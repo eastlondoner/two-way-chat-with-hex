@@ -101,9 +101,9 @@ mkdir -p .claude/skills
 # Generate loop ID
 LOOP_ID=$(date +%s)-$$
 
-# Quote completion promise for JSON
+# Properly escape completion promise for JSON using jq
 if [[ -n "$COMPLETION_PROMISE" ]] && [[ "$COMPLETION_PROMISE" != "null" ]]; then
-  COMPLETION_PROMISE_JSON="\"$COMPLETION_PROMISE\""
+  COMPLETION_PROMISE_JSON=$(echo -n "$COMPLETION_PROMISE" | jq -Rs .)
 else
   COMPLETION_PROMISE_JSON="null"
 fi
@@ -120,6 +120,11 @@ cat > .ralph/loop_state.json <<EOF
   "started_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 }
 EOF
+
+# Validate JSON was written correctly
+if ! jq empty .ralph/loop_state.json 2>/dev/null; then
+  echo "⚠️  Warning: loop_state.json may contain invalid JSON" >&2
+fi
 
 # Initialize context files if they don't exist
 if [[ ! -f .ralph/context/tactical.md ]]; then

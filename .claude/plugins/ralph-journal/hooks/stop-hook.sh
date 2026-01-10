@@ -53,21 +53,9 @@ if [[ ! "$ITERATION" =~ ^[0-9]+$ ]] || [[ ! "$MAX_ITERATIONS" =~ ^[0-9]+$ ]]; th
   exit 0
 fi
 
-# ═══════════════════════════════════════════════════════════════════
-# RECURSION SAFETY: Check stop_hook_active
-# ═══════════════════════════════════════════════════════════════════
-# When stop_hook_active=true, we're in a reinjection cycle. If we've
-# also hit max iterations, exit immediately to prevent edge case loops.
-
-if [[ "$STOP_HOOK_ACTIVE" == "true" ]] && [[ $MAX_ITERATIONS -gt 0 ]] && [[ $ITERATION -ge $MAX_ITERATIONS ]]; then
-  echo "🛑 Ralph Journal: Recursion safety - max iterations ($MAX_ITERATIONS) reached during reinjection" >&2
-  jq '.active = false | .reason = "recursion_safety"' "$STATE_FILE" > "${STATE_FILE}.tmp" && mv "${STATE_FILE}.tmp" "$STATE_FILE"
-  exit 0
-fi
-
 # Debug logging for iteration info
 if [[ "${RALPH_DEBUG:-}" == "1" ]]; then
-  echo "[stop-hook] iteration=$ITERATION max_iterations=$MAX_ITERATIONS" >&2
+  echo "[stop-hook] stop_hook_active=$STOP_HOOK_ACTIVE iteration=$ITERATION max_iterations=$MAX_ITERATIONS" >&2
 fi
 
 # Get transcript path
@@ -112,13 +100,24 @@ fi
 # ═══════════════════════════════════════════════════════════════════
 
 if [[ $MAX_ITERATIONS -gt 0 ]] && [[ $ITERATION -ge $MAX_ITERATIONS ]]; then
-  echo "🛑 Ralph Journal: Max iterations ($MAX_ITERATIONS) reached"
+  # ═══════════════════════════════════════════════════════════════════
+  # RECURSION SAFETY: If stop_hook_active=true, we're in a reinjection
+  # cycle and must exit after cleanup to prevent infinite loops
+  # ═══════════════════════════════════════════════════════════════════
+  if [[ "$STOP_HOOK_ACTIVE" == "true" ]]; then
+    echo "🛑 Ralph Journal: Max iterations ($MAX_ITERATIONS) reached during reinjection (recursion safety)" >&2
+  else
+    echo "🛑 Ralph Journal: Max iterations ($MAX_ITERATIONS) reached"
+  fi
 
   # Generate final journal entry
   "$PLUGIN_ROOT/scripts/generate-journal.sh" "$TRANSCRIPT_PATH" "$STATE_FILE" "$RALPH_DIR/journal" >/dev/null 2>&1 || true
 
   # Update context one last time
   "$PLUGIN_ROOT/scripts/update-context.sh" all "$RALPH_DIR" >/dev/null 2>&1 || true
+
+  # Extract skills one last time
+  "$PLUGIN_ROOT/scripts/extract-skills.sh" "$RALPH_DIR" "$PROJECT_ROOT/.claude/skills" >/dev/null 2>&1 || true
 
   # Mark loop complete
   jq '.active = false | .reason = "max_iterations"' "$STATE_FILE" > "${STATE_FILE}.tmp" && mv "${STATE_FILE}.tmp" "$STATE_FILE"
