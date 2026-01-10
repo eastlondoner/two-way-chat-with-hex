@@ -5,6 +5,20 @@
 # Detect platform once at source time
 _PORTABLE_OS="$(uname -s)"
 
+# Ralph logging setup
+RALPH_LOG_DIR="${RALPH_LOG_DIR:-.ralph/logs}"
+mkdir -p "$RALPH_LOG_DIR" 2>/dev/null || true
+
+# ralph_log <component> <message>
+# Writes timestamped log messages to component-specific log files
+ralph_log() {
+  local component="$1"
+  local message="$2"
+  local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date -u +"%Y-%m-%d %H:%M:%S")
+  local log_file="$RALPH_LOG_DIR/${component}.log"
+  echo "[$timestamp] $message" >> "$log_file" 2>/dev/null || true
+}
+
 # portable_timeout <seconds> <command...>
 # Uses timeout/gtimeout if available, else runs command directly
 portable_timeout() {

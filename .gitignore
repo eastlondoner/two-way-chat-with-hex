@@ -2,3 +2,4 @@
 .claude/settings.local.json
 # SpecStory explanation file
 .specstory/.what-is-this.md
+.ralph/logs/

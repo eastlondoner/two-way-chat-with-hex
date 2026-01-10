@@ -61,11 +61,11 @@ update_document() {
   done
 
   if [[ -z "$NEW_JOURNALS" ]]; then
-    echo "[$DOC_TYPE] No new journals to process"
+    ralph_log "context" "[$DOC_TYPE] No new journals to process"
     return 0
   fi
 
-  echo "[$DOC_TYPE] Processing $(echo $NEW_JOURNALS | wc -w) new journal(s)"
+  ralph_log "context" "[$DOC_TYPE] Processing $(echo $NEW_JOURNALS | wc -w) new journal(s)"
 
   # Read new journal content
   local JOURNAL_CONTENT=""
@@ -134,14 +134,14 @@ Focus on: $PROMPT_FOCUS"
     cd /tmp
     echo "$UPDATE_PROMPT" | portable_timeout 120 claude -p --model sonnet --output-format text > "$TEMP_FILE" 2>/dev/null
   ) || {
-    echo "[$DOC_TYPE] Update failed, keeping current document"
+    ralph_log "context" "[$DOC_TYPE] Update failed, keeping current document"
     rm -f "$TEMP_FILE"
     return 1
   }
 
   # Validate output isn't empty
   if [[ ! -s "$TEMP_FILE" ]]; then
-    echo "[$DOC_TYPE] Empty output, keeping current document"
+    ralph_log "context" "[$DOC_TYPE] Empty output, keeping current document"
     rm -f "$TEMP_FILE"
     return 1
   fi
@@ -150,12 +150,12 @@ Focus on: $PROMPT_FOCUS"
   if [[ $(wc -c < "$TEMP_FILE") -gt $MAX_CHARS ]]; then
     head -c $MAX_CHARS "$TEMP_FILE" > "${TEMP_FILE}.trunc"
     mv "${TEMP_FILE}.trunc" "$TEMP_FILE"
-    echo "[$DOC_TYPE] Truncated to $MAX_CHARS chars"
+    ralph_log "context" "[$DOC_TYPE] Truncated to $MAX_CHARS chars"
   fi
 
   # Update document
   mv "$TEMP_FILE" "$DOC_PATH"
-  echo "[$DOC_TYPE] Updated successfully"
+  ralph_log "context" "[$DOC_TYPE] Updated successfully"
 
   # Update processing state
   local NEW_STATE=$(jq ".$DOC_TYPE.last_processed_journal = \"$LATEST_JOURNAL\"" "$STATE_FILE")
@@ -187,4 +187,4 @@ case "$CONTEXT_TYPE" in
     ;;
 esac
 
-echo "Context update complete"
+ralph_log "context" "Context update complete"

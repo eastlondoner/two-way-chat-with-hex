@@ -84,13 +84,13 @@ if [[ -n "$COMPLETION_PROMISE" ]] && [[ "$COMPLETION_PROMISE" != "null" ]]; then
     echo "✅ Ralph Journal: Promise fulfilled - <promise>$COMPLETION_PROMISE</promise>"
 
     # Generate final journal entry
-    "$PLUGIN_ROOT/scripts/generate-journal.sh" "$TRANSCRIPT_PATH" "$STATE_FILE" "$RALPH_DIR/journal" >/dev/null 2>&1 || true
+    "$PLUGIN_ROOT/scripts/generate-journal.sh" "$TRANSCRIPT_PATH" "$STATE_FILE" "$RALPH_DIR/journal" || true
 
     # Update context one last time
-    "$PLUGIN_ROOT/scripts/update-context.sh" all "$RALPH_DIR" >/dev/null 2>&1 || true
+    "$PLUGIN_ROOT/scripts/update-context.sh" all "$RALPH_DIR" || true
 
     # Extract skills one last time
-    "$PLUGIN_ROOT/scripts/extract-skills.sh" "$RALPH_DIR" "$PROJECT_ROOT/.claude/skills" >/dev/null 2>&1 || true
+    "$PLUGIN_ROOT/scripts/extract-skills.sh" "$RALPH_DIR" "$PROJECT_ROOT/.claude/skills" || true
 
     # Mark loop complete
     jq '.active = false | .completed = true | .completed_at = now' "$STATE_FILE" > "${STATE_FILE}.tmp" && mv "${STATE_FILE}.tmp" "$STATE_FILE"
@@ -114,13 +114,13 @@ if [[ $MAX_ITERATIONS -gt 0 ]] && [[ $ITERATION -ge $MAX_ITERATIONS ]]; then
   fi
 
   # Generate final journal entry
-  "$PLUGIN_ROOT/scripts/generate-journal.sh" "$TRANSCRIPT_PATH" "$STATE_FILE" "$RALPH_DIR/journal" >/dev/null 2>&1 || true
+  "$PLUGIN_ROOT/scripts/generate-journal.sh" "$TRANSCRIPT_PATH" "$STATE_FILE" "$RALPH_DIR/journal" || true
 
   # Update context one last time
-  "$PLUGIN_ROOT/scripts/update-context.sh" all "$RALPH_DIR" >/dev/null 2>&1 || true
+  "$PLUGIN_ROOT/scripts/update-context.sh" all "$RALPH_DIR" || true
 
   # Extract skills one last time
-  "$PLUGIN_ROOT/scripts/extract-skills.sh" "$RALPH_DIR" "$PROJECT_ROOT/.claude/skills" >/dev/null 2>&1 || true
+  "$PLUGIN_ROOT/scripts/extract-skills.sh" "$RALPH_DIR" "$PROJECT_ROOT/.claude/skills" || true
 
   # Mark loop complete
   jq '.active = false | .reason = "max_iterations"' "$STATE_FILE" > "${STATE_FILE}.tmp" && mv "${STATE_FILE}.tmp" "$STATE_FILE"
@@ -145,14 +145,14 @@ fi
 # ═══════════════════════════════════════════════════════════════════
 
 echo "📚 Updating context documents..."
-"$PLUGIN_ROOT/scripts/update-context.sh" all "$RALPH_DIR" 2>/dev/null || echo "⚠️  Context update encountered issues"
+"$PLUGIN_ROOT/scripts/update-context.sh" all "$RALPH_DIR" || echo "⚠️  Context update encountered issues"
 
 # ═══════════════════════════════════════════════════════════════════
 # STEP 4b: Extract Skills as Claude Code Skills
 # ═══════════════════════════════════════════════════════════════════
 
 echo "🧠 Extracting skills from journals..."
-"$PLUGIN_ROOT/scripts/extract-skills.sh" "$RALPH_DIR" "$PROJECT_ROOT/.claude/skills" 2>/dev/null || echo "⚠️  Skill extraction encountered issues"
+"$PLUGIN_ROOT/scripts/extract-skills.sh" "$RALPH_DIR" "$PROJECT_ROOT/.claude/skills" || echo "⚠️  Skill extraction encountered issues"
 
 # ═══════════════════════════════════════════════════════════════════
 # STEP 5: Prepare Next Iteration

@@ -51,12 +51,12 @@ for f in $JOURNAL_FILES; do
 done
 
 if [[ -z "$NEW_JOURNALS" ]]; then
-  echo "[skills] No new journals to process"
+  ralph_log "skills" "No new journals to process"
   exit 0
 fi
 
 JOURNAL_COUNT=$(echo $NEW_JOURNALS | wc -w | tr -d ' ')
-echo "[skills] Analyzing $JOURNAL_COUNT new journal(s) for extractable skills..."
+ralph_log "skills" "Analyzing $JOURNAL_COUNT new journal(s) for extractable skills..."
 
 # Read new journal content
 JOURNAL_CONTENT=""
@@ -178,7 +178,7 @@ TEMP_FILE=$(mktemp)
   cd /tmp
   echo "$EXTRACT_PROMPT" | portable_timeout 180 claude -p --model sonnet --output-format text > "$TEMP_FILE" 2>/dev/null
 ) || {
-  echo "[skills] Extraction failed"
+  ralph_log "skills" "Extraction failed"
   rm -f "$TEMP_FILE"
   # Still update state so we don't reprocess same journals
   NEW_STATE=$(jq ".skills_extracted.last_processed_journal = \"$LATEST_JOURNAL\"" "$STATE_FILE")
@@ -192,8 +192,8 @@ rm -f "${TEMP_FILE}.bak"
 
 # Validate JSON output
 if ! jq -e '.' "$TEMP_FILE" >/dev/null 2>&1; then
-  echo "[skills] Invalid JSON output from extraction"
-  cat "$TEMP_FILE" >&2
+  ralph_log "skills" "Invalid JSON output from extraction"
+  cat "$TEMP_FILE" >> "$RALPH_LOG_DIR/skills.log" 2>/dev/null || true
   rm -f "$TEMP_FILE"
   exit 0
 fi
@@ -201,7 +201,7 @@ fi
 # Process new skills to create
 CREATE_COUNT=$(jq -r '.create | length' "$TEMP_FILE")
 if [[ "$CREATE_COUNT" -gt 0 ]]; then
-  echo "[skills] Creating $CREATE_COUNT new skill(s)..."
+  ralph_log "skills" "Creating $CREATE_COUNT new skill(s)..."
   
   for i in $(seq 0 $((CREATE_COUNT - 1))); do
     SKILL_NAME=$(jq -r ".create[$i].name" "$TEMP_FILE")
@@ -210,17 +210,17 @@ if [[ "$CREATE_COUNT" -gt 0 ]]; then
     
     if [[ -n "$SKILL_NAME" ]] && [[ "$SKILL_NAME" != "null" ]]; then
       RESULT=$("$PLUGIN_ROOT/scripts/generate-skill.sh" "$SKILL_NAME" "$SKILL_DESC" "$SKILL_CONTENT" "$PROJECT_SKILLS_DIR" 2>&1 || echo "FAILED")
-      echo "[skills] CREATE: $RESULT"
+      ralph_log "skills" "CREATE: $RESULT"
     fi
   done
 else
-  echo "[skills] No new skills to create"
+  ralph_log "skills" "No new skills to create"
 fi
 
 # Process skill updates
 UPDATE_COUNT=$(jq -r '.update | length' "$TEMP_FILE")
 if [[ "$UPDATE_COUNT" -gt 0 ]]; then
-  echo "[skills] Updating $UPDATE_COUNT existing skill(s)..."
+  ralph_log "skills" "Updating $UPDATE_COUNT existing skill(s)..."
   
   for i in $(seq 0 $((UPDATE_COUNT - 1))); do
     SKILL_PATH=$(jq -r ".update[$i].path" "$TEMP_FILE")
@@ -245,13 +245,13 @@ description: $SKILL_DESC
 $SKILL_CONTENT
 EOF
       fi
-      echo "[skills] UPDATE: $SKILL_PATH"
+      ralph_log "skills" "UPDATE: $SKILL_PATH"
     else
-      echo "[skills] UPDATE FAILED: $SKILL_PATH not found"
+      ralph_log "skills" "UPDATE FAILED: $SKILL_PATH not found"
     fi
   done
 else
-  echo "[skills] No skills to update"
+  ralph_log "skills" "No skills to update"
 fi
 
 rm -f "$TEMP_FILE"
@@ -260,4 +260,4 @@ rm -f "$TEMP_FILE"
 NEW_STATE=$(jq ".skills_extracted.last_processed_journal = \"$LATEST_JOURNAL\"" "$STATE_FILE")
 echo "$NEW_STATE" > "$STATE_FILE"
 
-echo "[skills] Skill extraction complete"
+ralph_log "skills" "Skill extraction complete"
