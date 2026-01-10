@@ -391,6 +391,7 @@ run_test "No matches found" test_no_matches
 run_test "List only mode" test_list_only
 run_test "Context lines option" test_context_lines
 run_test "Max results option" test_max_results
+run_test "Max results with zero matches" test_max_results_zero_matches
 run_test "Multi-word search" test_multi_word_search
 run_test "Kubernetes search" test_kubernetes_search
 run_test "Iteration info extraction" test_iteration_info_extraction
