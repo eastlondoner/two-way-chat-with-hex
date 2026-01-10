@@ -89,6 +89,9 @@ if [[ -n "$COMPLETION_PROMISE" ]] && [[ "$COMPLETION_PROMISE" != "null" ]]; then
     # Update context one last time
     "$PLUGIN_ROOT/scripts/update-context.sh" all "$RALPH_DIR" >/dev/null 2>&1 || true
 
+    # Extract skills one last time
+    "$PLUGIN_ROOT/scripts/extract-skills.sh" "$RALPH_DIR" "$PROJECT_ROOT/.claude/skills" >/dev/null 2>&1 || true
+
     # Mark loop complete
     jq '.active = false | .completed = true | .completed_at = now' "$STATE_FILE" > "${STATE_FILE}.tmp" && mv "${STATE_FILE}.tmp" "$STATE_FILE"
     exit 0

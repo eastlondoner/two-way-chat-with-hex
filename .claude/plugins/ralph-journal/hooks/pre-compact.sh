@@ -106,6 +106,9 @@ echo "📓 Pre-compaction journal saved: $(basename "$JOURNAL_FILE")"
 # Update context documents with new journal entry
 "$PLUGIN_ROOT/scripts/update-context.sh" all "$RALPH_DIR" 2>/dev/null || true
 
+# Extract skills from journals (including the new compaction journal)
+"$PLUGIN_ROOT/scripts/extract-skills.sh" "$RALPH_DIR" "$PROJECT_ROOT/.claude/skills" 2>/dev/null || true
+
 # Allow compaction to proceed
 echo '{"continue": true}'
 exit 0
