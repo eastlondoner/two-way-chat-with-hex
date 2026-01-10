@@ -19,6 +19,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_ROOT="$(dirname "$SCRIPT_DIR")"
 PRE_COMPACT_HOOK="$PLUGIN_ROOT/hooks/pre-compact.sh"
 
+# Source portability helpers for portable_timeout
+source "$PLUGIN_ROOT/scripts/lib/portable.sh"
+
 run_test() {
   local test_name="$1"
   TESTS_RUN=$((TESTS_RUN + 1))
@@ -70,7 +73,7 @@ HOOKIN
   
   # Run hook with short timeout to avoid hanging on Claude calls
   cd "$TEST_PROJECT"
-  local OUTPUT=$(timeout 10 bash "$PRE_COMPACT_HOOK" <<< "$HOOK_INPUT" 2>&1 || echo '{"continue": true}')
+  local OUTPUT=$(portable_timeout 10 bash "$PRE_COMPACT_HOOK" <<< "$HOOK_INPUT" 2>&1 || echo '{"continue": true}')
   
   # Test: Output should be valid JSON
   if ! echo "$OUTPUT" | jq . >/dev/null 2>&1; then
