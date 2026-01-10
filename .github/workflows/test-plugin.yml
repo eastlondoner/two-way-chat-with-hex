@@ -47,7 +47,14 @@ jobs:
       - name: Run plugin test suite
         run: |
           cd .claude/plugins/ralph-journal/tests
+          echo "=== Running search-journals tests ==="
           bash test-search-journals.sh
+          echo ""
+          echo "=== Running skill-extraction tests ==="
+          bash test-skill-extraction.sh
+          echo ""
+          echo "=== Running pre-compact-output tests ==="
+          bash test-pre-compact-output.sh
 
       - name: Test results summary
         if: always()
