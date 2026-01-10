@@ -97,6 +97,7 @@ Search results include:
 │   ├── tactical.md             # Current goals/details
 │   ├── strategic.md            # High-level direction
 │   └── state.json              # Processing state
+├── logs/                       # Diagnostic logs (see LOGGING.md)
 ├── agents/                     # Reserved for future multi-agent coordination
 └── loop_state.json             # Loop configuration
 
@@ -214,6 +215,23 @@ This prevents creating duplicate skills and encourages enriching existing skills
 - `testing-patterns` - Testing conventions discovered (updated as new patterns emerge)
 - `error-handling` - Error handling approaches that worked
 - `git-workflow` - Git workflow for this team/project
+
+## Troubleshooting
+
+Diagnostic logs are written to `.ralph/logs/` for debugging:
+
+```bash
+# View skill extraction activity
+tail -f .ralph/logs/skills.log
+
+# View context update operations
+tail -f .ralph/logs/context.log
+
+# View all logs
+tail -f .ralph/logs/*.log
+```
+
+See [LOGGING.md](LOGGING.md) for details.
 
 ## Requirements
 
