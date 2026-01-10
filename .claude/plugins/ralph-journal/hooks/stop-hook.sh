@@ -168,11 +168,11 @@ TACTICAL=""
 STRATEGIC=""
 
 if [[ -f "$RALPH_DIR/context/tactical.md" ]]; then
-  TACTICAL=$(cat "$RALPH_DIR/context/tactical.md" | head -c 10000)
+  TACTICAL=$(cat "$RALPH_DIR/context/tactical.md")
 fi
 
 if [[ -f "$RALPH_DIR/context/strategic.md" ]]; then
-  STRATEGIC=$(cat "$RALPH_DIR/context/strategic.md" | head -c 10000)
+  STRATEGIC=$(cat "$RALPH_DIR/context/strategic.md")
 fi
 
 # Count extracted skills for display
