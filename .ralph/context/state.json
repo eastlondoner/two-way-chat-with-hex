@@ -1,11 +1,11 @@
 {
   "tactical": {
-    "last_processed_journal": "2026-01-06T17-34-01_iter_001.md"
+    "last_processed_journal": "2026-01-10T10-43-25_compaction_manual.md"
   },
   "strategic": {
-    "last_processed_journal": "2026-01-06T17-34-01_iter_001.md"
+    "last_processed_journal": "2026-01-10T10-17-50_compaction_manual.md"
   },
   "skills_extracted": {
-    "last_processed_journal": "2026-01-06T17-34-01_iter_001.md"
+    "last_processed_journal": "2026-01-10T10-43-25_compaction_manual.md"
   }
 }

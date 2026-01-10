@@ -312,11 +312,33 @@ test_max_results() {
   output=$("$SEARCH_SCRIPT" "Journal Entry" --dir "$TEST_RALPH_DIR" --max-results 2 2>&1) || exit_code=$?
   # Should only show 2 journals
   local journal_count
-  journal_count=$(echo "$output" | grep -c "📓 Iteration" || echo "0")
+  journal_count=$(echo "$output" | grep -c "📓 Iteration" || true)
   if [[ "$journal_count" -le 2 ]]; then
     return 0
   else
     echo "Expected at most 2 journals, got $journal_count"
+    return 1
+  fi
+}
+
+test_max_results_zero_matches() {
+  setup_test_journals
+  local output
+  local exit_code=0
+  # Search for something that won't be in output at all
+  output=$("$SEARCH_SCRIPT" "xyznonexistent" --dir "$TEST_RALPH_DIR" --max-results 2 2>&1) || exit_code=$?
+
+  # Verify we can count results without arithmetic error
+  # This is a regression test for the || echo "0" bug that caused
+  # journal_count to be "0\n0" when grep -c found no matches
+  local journal_count
+  journal_count=$(echo "$output" | grep -c "📓 Iteration" || true)
+
+  # Should be 0 (no matches, so no "📓 Iteration" lines in output)
+  if [[ "$journal_count" -eq 0 ]]; then
+    return 0
+  else
+    echo "Expected 0 journals, got '$journal_count'"
     return 1
   fi
 }

@@ -3,64 +3,116 @@
 *High-level direction and long-term considerations.*
 
 ## Overall Goal
-**CURRENT TASK:** Understand and document the Claude Code hook system's input structure, specifically the HOOK_INPUT JSON format available to hooks at runtime.
+**PRIMARY TASK:** Ralph Journal system production validation and recursion safety testing.
 
-**DELIVERABLES:**
+**ORIGINAL TASK (Suspended):** Document Claude Code hook system's input structure (HOOK_INPUT JSON format).
+
+**DELIVERABLES (Ralph Journal Testing - Active):**
+1. ✅ Validate recursion depth tracking across nested iterations
+2. ✅ Confirm journal entries generate at appropriate intervals
+3. ✅ Verify graceful exit when recursion limits reached
+4. Document edge cases and production readiness assessment
+
+**DELIVERABLES (Hook Investigation - On Hold):**
 1. Comprehensive documentation at `docs/HOOK_INPUT_FORMAT.md`
-2. Universal debugging script for real-time hook input inspection (`/tmp/hook-debug.log`)
+2. Universal debugging script for real-time hook input inspection
 3. Understanding of `transcript_path` and other available fields
 
-**PURPOSE:** Enable developers to effectively utilize hook system data when creating custom hooks. Establish debugging infrastructure for hook development.
-
 ## Current Status
-- **Phase:** Investigation initiated (Iteration 1)
-- **Loop ID:** Active investigation loop
-- **Progress:** Planning complete, execution beginning
-- **Completion Promise:** HOOK_DEBUG_COMPLETE
-- **Previous Context:** Test file creation task (1767719630-29527) completed successfully
+- **Session:** Fresh start 2026-01-10, main branch at `24e7a75`
+- **Ralph Testing:** Iteration 3 completed successfully (test-recursion loop)
+- **Latest Commit:** Completion promise JSON escaping fixes + stop-hook recursion safety
+- **Repository State:** Clean working tree with untracked journal entries
 
 ## Architectural Approach
 
-### Investigation Strategy (Multi-Phase)
-1. **Example Analysis:** Examine `stop-hook.sh` for existing hook implementation patterns
-2. **Codebase Discovery:** Search for hook-related code to understand input structure
-3. **Tool Development:** Create universal debugging script for all hook types
-4. **Validation:** Trigger various hooks to verify data structure understanding
-5. **Documentation:** Compile findings into comprehensive markdown reference
+### Ralph Journal System Design
+**Core Capabilities:**
+- ✅ Generic iteration framework with recursion safeguards
+- ✅ Automatic journal generation between iterations
+- ✅ Context preservation across tool calls and iterations
+- ✅ Completion promise system for explicit termination
 
-### Design Decisions
-- **Generic debugging script:** Must work with any hook type, not just stop-hook
-- **Real-time logging:** `/tmp/hook-debug.log` for immediate feedback during development
-- **Systematic approach:** Start with concrete examples before diving into implementation details
+**Recent Improvements (24e7a75):**
+- Fixed JSON escaping in completion_promise handling
+- Enhanced stop-hook recursion safety mechanisms
+
+### Testing Strategy
+1. ✅ **Recursion Safety:** Validated nested loop handling through iteration 3
+2. ✅ **Context Preservation:** Confirmed loop metadata persists correctly
+3. ✅ **Journal Generation:** Automatic triggering working as expected
+4. ⚠️ **Resource Management:** Need to verify clean exit behavior
+
+### Hook Investigation Strategy (Deferred)
+1. Example analysis of `stop-hook.sh`
+2. Codebase discovery for hook infrastructure
+3. Universal debugging script development
+4. Documentation compilation
 
 ## Key Dependencies
-- Access to `stop-hook.sh` script (existing hook implementation)
-- Claude Code codebase access for hook infrastructure code
-- File write permissions to `/tmp` for debugging logs
-- Ability to trigger hooks for testing validation
-- Read/Grep/Glob tools for codebase exploration
+- Ralph Journal plugin (commit 24e7a75 - latest)
+- Integrated hook system (post-checkout confirmed working)
+- File I/O for journal entries
+- Context preservation mechanisms
+
+## Repository Context
+
+### Active Systems
+**Ralph Journal Plugin:**
+- Latest: JSON escaping fixes, recursion safety enhancements
+- Testing: Iteration 3 reached successfully, no crashes or infinite loops
+- Journal generation stable and automatic
+- Context tracking validated
+
+**SSH-over-HTTP Relay System:**
+- HTTP/2+SSE (preferred) and HTTP/1.1 polling (fallback) clients
+- GitHub variables: `CLAUDE_SSH_KEY`, `CLAUDE_SSH_RELAY_URL`, `CLAUDE_DESKTOP_USER`, `CLAUDE_DESKTOP_HOST`
+- Post-checkout hook integration for automatic SSH configuration
+
+### Recent Development Timeline
+- **24e7a75 (2026-01-10):** Completion promise JSON escaping + stop-hook safety
+- **d5fea05:** Testing functionality additions
+- **53adb3d:** Shared portability helpers (macOS/Linux)
+- **c3c003d:** PR #20 merged for SSH desktop access
 
 ## Risks & Considerations
 
-**MEDIUM COMPLEXITY TASK:**
-- Requires understanding both shell script layer and underlying Claude Code implementation
-- Hook data structure may vary by hook type - debugging script must accommodate
-- Documentation accuracy depends on thorough testing across multiple hook scenarios
+### Ralph Journal Testing - Validated ✅
+- System reaches iteration 3 without crashes
+- Context preservation across iterations working
+- Journal generation mechanism reliable
+- Clean parameter passing with loop metadata
 
-**CRITICAL SUCCESS FACTORS:**
-- Testing is essential - must actually trigger hooks to validate understanding
-- Documentation must be developer-friendly and include practical examples
-- Debugging script should be immediately useful for future hook development
+### Ralph Journal Testing - Outstanding ⚠️
+- **Empty Transcripts:** Iteration 3 showed minimal activity, suggesting need for more active test cases
+- **Completion Behavior:** No completion promise in test scenario - need validation of actual termination flows
+- **Active Testing:** Need test cases that attempt actual nested ralph-journal commands
+- **Resource Cleanup:** Exit behavior and cleanup not yet fully validated
 
-**PROCESS INSIGHTS:**
-- Clear completion promise (HOOK_DEBUG_COMPLETE) enables objective progress tracking
-- Well-defined deliverables prevent scope creep
-- Starting with existing examples (stop-hook.sh) provides concrete foundation
+### Production Readiness Assessment
+**STRENGTHS:**
+- Core iteration framework stable
+- Recursion tracking functional
+- Journal generation reliable
+- Recent safety improvements deployed
+
+**GAPS:**
+- Limited validation of real-world nested invocation scenarios
+- Completion promise edge cases need more testing
+- Resource cleanup patterns not fully documented
 
 ## Next Steps
-1. Locate and read `stop-hook.sh` to understand current hook usage patterns
-2. Search codebase for hook infrastructure implementation
-3. Identify all fields available in HOOK_INPUT environment variable
-4. Create universal debugging script with comprehensive logging
-5. Test debugging mechanism across multiple hook types
-6. Document findings at `docs/HOOK_INPUT_FORMAT.md`
+
+### Immediate (Ralph Journal)
+1. Validate completion promise behavior with actual test cases
+2. Test active nested invocations (not just journal generation)
+3. Document resource cleanup and exit patterns
+4. Assess production readiness based on findings
+5. Consider returning to hook investigation task
+
+### Deferred (Hook Investigation)
+1. Read `stop-hook.sh` implementation
+2. Search codebase for hook infrastructure
+3. Create universal debugging script
+4. Test across multiple hook types
+5. Document findings
