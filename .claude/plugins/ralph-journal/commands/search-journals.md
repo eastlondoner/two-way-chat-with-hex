@@ -38,7 +38,7 @@ The search script supports these options:
 |--------|-------------|
 | `-c, --context N` | Lines of context around matches (default: 3) |
 | `-n, --max-results N` | Maximum matching files to show (default: 10) |
-| `-i, --case-sensitive` | Make search case-sensitive (default: case-insensitive) |
+| `-s, --case-sensitive` | Make search case-sensitive (default: case-insensitive) |
 | `-l, --list-only` | Only list matching files, don't show content |
 
 ## Example Queries
