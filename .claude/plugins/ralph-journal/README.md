@@ -109,6 +109,29 @@ Search results include:
 └── ...                         # Skills persist across all sessions
 ```
 
+### Version Control
+
+The `.ralph/` directory can be committed to source control depending on your workflow:
+
+**Commit `.ralph/` when:**
+- You want to preserve learning history across sessions and team members
+- Journal entries contain valuable project documentation
+- You're using Ralph for long-running projects where context matters
+
+**Add `.ralph/` to `.gitignore` when:**
+- Journals contain sensitive or temporary information
+- You prefer fresh context each session
+- Storage size is a concern (journals can accumulate)
+
+**Recommended `.gitignore` entries if excluding:**
+```
+.ralph/journal/
+.ralph/logs/
+.ralph/loop_state.json
+# Keep context documents if desired:
+# !.ralph/context/
+```
+
 ## Journal Entry Format
 
 Each iteration generates a journal with 5 sections:
