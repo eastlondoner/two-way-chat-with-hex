@@ -177,11 +177,18 @@ Each iteration generates a journal with 5 sections:
 - Checks for completion promise
 - Re-injects prompt with accumulated context
 
-### PreCompact Hook
+### Pre-Compact Hook
 
-Fires when Claude's context is about to be compacted (summarized to free up space).
+Fires when Claude's context is about to be compacted (summarized to free up space). Context compaction happens automatically when:
+- The conversation exceeds Claude's context window limits
+- Memory pressure requires summarizing older messages to continue working
+- Users can also trigger compaction manually via `/compact`
 
-- **Generates a compaction journal** - Named `{timestamp}_compaction_{trigger}.md` where trigger is `auto` or `manual`
+See [docs/HOOK_INPUT_FORMAT.md](docs/HOOK_INPUT_FORMAT.md) for the exact hook payload format.
+
+**What it does:**
+- **Generates a compaction journal** - Named `{timestamp}_compaction_{trigger}.md`
+  - Triggers: `auto` (context limit), `manual` (user `/compact`), or `unknown` (default fallback)
 - **Captures key decisions** - Preserves important technical details before they're summarized away
 - **Records unresolved questions** - Documents what still needs investigation
 - **Updates context documents** - Refreshes tactical/strategic context with latest insights
