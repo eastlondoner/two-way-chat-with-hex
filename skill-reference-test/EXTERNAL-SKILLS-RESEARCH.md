@@ -2,7 +2,10 @@
 
 ## Summary
 
-Claude Code **does not natively support remote/HTTP skill references**, but **symlinks to external directories work perfectly**.
+Claude Code **does not natively support remote/HTTP skill references**, but there are two main approaches:
+
+1. **Symlinks** - Link to external directories on the filesystem
+2. **Plugins** - Package skills in plugins for distribution via GitHub/marketplaces
 
 ## Tested Approach: Symlinks
 
@@ -33,6 +36,80 @@ Claude Code **does not natively support remote/HTTP skill references**, but **sy
 ### Verification
 
 Run `/skills` in Claude Code to see the symlinked skill listed alongside local skills.
+
+## Plugin-Based Distribution (Recommended for Teams)
+
+### Plugin Structure with Skills
+
+```
+my-plugin/
+├── .claude-plugin/
+│   └── plugin.json          # Required manifest
+├── skills/                   # Skills directory
+│   ├── my-skill/
+│   │   └── SKILL.md
+│   └── another-skill/
+│       └── SKILL.md
+├── commands/                 # Optional: slash commands
+└── hooks/                    # Optional: hooks
+```
+
+### Plugin Manifest (`plugin.json`)
+
+```json
+{
+  "name": "my-skills-plugin",
+  "version": "1.0.0",
+  "description": "Skills for my team",
+  "author": { "name": "Your Name" },
+  "repository": "https://github.com/org/skills-plugin"
+}
+```
+
+### Distribution Methods
+
+| Method | Command | Use Case |
+|--------|---------|----------|
+| **GitHub repo** | `/plugin marketplace add org/repo` | Public/private sharing |
+| **Local path** | `claude --plugin-dir ./my-plugin` | Development/testing |
+| **Git URL** | Any git host | GitLab, self-hosted |
+
+### Installation Flow
+
+```bash
+# 1. Add marketplace (one-time)
+/plugin marketplace add your-org/plugins-repo
+
+# 2. Install plugin (includes all skills)
+/plugin install my-plugin@your-org
+
+# Skills become automatically available
+```
+
+### Publishing a Plugin Marketplace
+
+Create `.claude-plugin/marketplace.json` in your repo:
+
+```json
+{
+  "name": "my-marketplace",
+  "plugins": [
+    {
+      "name": "code-skills",
+      "source": "./plugins/code-skills",
+      "description": "Code review and quality skills"
+    }
+  ]
+}
+```
+
+### Benefits of Plugin Distribution
+
+- **Version Control** - Semantic versioning for skills
+- **Single Install** - One command installs all skills
+- **Namespace Isolation** - Plugin commands prefixed to avoid conflicts
+- **Bundled Components** - Skills + commands + hooks together
+- **Marketplace Discovery** - Users browse available plugins
 
 ## How Skills Are Discovered
 
