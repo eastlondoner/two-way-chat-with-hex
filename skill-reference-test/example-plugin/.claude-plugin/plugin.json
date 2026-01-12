@@ -1,0 +1,11 @@
+{
+  "name": "example-skills-plugin",
+  "version": "1.0.0",
+  "description": "Example plugin demonstrating skill packaging and distribution",
+  "author": {
+    "name": "Claude Code Research"
+  },
+  "repository": "https://github.com/eastlondoner/claude",
+  "license": "MIT",
+  "keywords": ["skills", "example", "research"]
+}
