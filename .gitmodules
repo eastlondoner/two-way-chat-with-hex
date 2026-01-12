@@ -1,0 +1,3 @@
+[submodule "submodules/plugins/vibe-plugins"]
+	path = submodules/plugins/vibe-plugins
+	url = https://github.com/eastlondoner/vibe-plugins.git
