@@ -1,4 +1,15 @@
 {
+  "extraKnownMarketplaces": {
+    "vibe-plugins": {
+      "source": {
+        "source": "github",
+        "repo": "eastlondoner/vibe-plugins"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "vibe-skills@vibe-plugins": true
+  },
   "hooks": {
     "SessionStart": [
       {
