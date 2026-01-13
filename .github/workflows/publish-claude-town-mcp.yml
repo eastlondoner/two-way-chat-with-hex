@@ -48,6 +48,7 @@ jobs:
     permissions:
       contents: read
       id-token: write  # Required for npm trusted publishing (OIDC)
+    environment: npm-publish
     steps:
       - uses: actions/checkout@v4
 
@@ -56,6 +57,10 @@ jobs:
         with:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org'
+
+      - name: Update npm to latest
+        run: npm install -g npm@latest
+        working-directory: .
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
