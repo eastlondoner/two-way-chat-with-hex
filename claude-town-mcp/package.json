@@ -24,8 +24,7 @@
     "url": "https://github.com/eastlondoner/claude/issues"
   },
   "publishConfig": {
-    "access": "public",
-    "provenance": true
+    "access": "public"
   },
   "author": "eastlondoner",
   "license": "MIT",
