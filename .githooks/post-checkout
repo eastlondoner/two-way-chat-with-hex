@@ -393,7 +393,7 @@ start_local_claude_session() {
     fi
 
     log "Starting local Claude TUI session..."
-    tmux new-session -d -s claude-local "bash -c 'unset CLAUDE_CODE_REMOTE CLAUDE_CODE_ENTRYPOINT CLAUDECODE CLAUDE_CODE_SESSION_ID CLAUDE_CODE_REMOTE_SESSION_ID CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR CLAUDE_CODE_WEBSOCKET_AUTH_FILE_DESCRIPTOR; export IS_SANDBOX=1; exec claude --dangerously-skip-permissions'"
+    tmux new-session -d -s claude-local "bash -c 'unset CLAUDE_CODE_REMOTE CLAUDE_CODE_ENTRYPOINT CLAUDECODE CLAUDE_CODE_SESSION_ID CLAUDE_CODE_REMOTE_SESSION_ID CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR CLAUDE_CODE_WEBSOCKET_AUTH_FILE_DESCRIPTOR; export CLAUDE_CODE_BUBBLEWRAP=1; exec claude --dangerously-skip-permissions'"
 
     if tmux has-session -t claude-local 2>/dev/null; then
         log "Local Claude session started successfully"
