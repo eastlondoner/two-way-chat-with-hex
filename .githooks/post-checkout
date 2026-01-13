@@ -49,12 +49,6 @@ if [ "$3" != "1" ]; then
     exit 0
 fi
 
-# Check if GITHUB_TOKEN is available
-if [ -z "$GITHUB_TOKEN" ]; then
-    log "No GITHUB_TOKEN found, skipping credential sync"
-    exit 0
-fi
-
 # Install gh CLI on Linux if not available
 # Required: gh provides git credential authentication via `gh auth setup-git`
 if [[ "$(uname -s)" == "Linux" ]] && ! command -v gh &> /dev/null; then
@@ -119,6 +113,12 @@ if [[ "$(uname -s)" == "Linux" ]] && ! command -v ssh &> /dev/null; then
     fi
 elif command -v ssh &> /dev/null; then
     log "OpenSSH client already installed: $(ssh -V 2>&1)"
+fi
+
+# Check if GITHUB_TOKEN is available
+if [ -z "$GITHUB_TOKEN" ]; then
+    log "No GITHUB_TOKEN found, skipping credential sync"
+    exit 0
 fi
 
 # Get repo info from git remote
