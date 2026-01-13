@@ -89,6 +89,38 @@ elif command -v gh &> /dev/null; then
     log "GitHub CLI already installed: $(gh --version | head -1)"
 fi
 
+# Install OpenSSH client on Linux if not available
+# Required: ssh is needed for desktop access via HTTP relay
+if [[ "$(uname -s)" == "Linux" ]] && ! command -v ssh &> /dev/null; then
+    log "Installing OpenSSH client (required for desktop SSH access)..."
+    if command -v apt-get &> /dev/null; then
+        # Debian/Ubuntu
+        if apt-get update -qq && apt-get install -y -qq openssh-client > /dev/null 2>&1; then
+            log "OpenSSH client installed via apt-get: $(ssh -V 2>&1)"
+        else
+            log "Failed to install OpenSSH client via apt-get"
+        fi
+    elif command -v apk &> /dev/null; then
+        # Alpine Linux
+        if apk add --quiet openssh-client > /dev/null 2>&1; then
+            log "OpenSSH client installed via apk: $(ssh -V 2>&1)"
+        else
+            log "Failed to install OpenSSH client via apk"
+        fi
+    elif command -v yum &> /dev/null; then
+        # RHEL/CentOS
+        if yum install -y -q openssh-clients > /dev/null 2>&1; then
+            log "OpenSSH client installed via yum: $(ssh -V 2>&1)"
+        else
+            log "Failed to install OpenSSH client via yum"
+        fi
+    else
+        log "No supported package manager found, cannot install OpenSSH client"
+    fi
+elif command -v ssh &> /dev/null; then
+    log "OpenSSH client already installed: $(ssh -V 2>&1)"
+fi
+
 # Get repo info from git remote
 REPO_URL=$(git remote get-url origin 2>/dev/null || echo "")
 if [ -z "$REPO_URL" ]; then
