@@ -2,7 +2,7 @@ name: Bugbot Status Check
 
 on:
   issue_comment:
-    types: [created]
+    types: [created, edited]
 
 jobs:
   check-bugbot-lgtm:
@@ -26,12 +26,12 @@ jobs:
       - name: Check for LGTM and set status
         env:
           GH_TOKEN: ${{ github.token }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
         run: |
-          COMMENT="${{ github.event.comment.body }}"
           SHA="${{ steps.pr.outputs.sha }}"
 
           # Check if comment contains LGTM (case insensitive)
-          if echo "$COMMENT" | grep -iq "LGTM"; then
+          if echo "$COMMENT_BODY" | grep -iq "LGTM"; then
             echo "Bugbot approved! Setting success status..."
             gh api repos/${{ github.repository }}/statuses/$SHA \
               -f state=success \
@@ -40,7 +40,7 @@ jobs:
           else
             echo "No LGTM found in bugbot comment"
             # Check if this looks like a rejection
-            if echo "$COMMENT" | grep -iqE "(issue|bug|problem|fix|error)"; then
+            if echo "$COMMENT_BODY" | grep -iqE "(issue|bug|problem|fix|error)"; then
               echo "Bugbot found issues, setting pending status..."
               gh api repos/${{ github.repository }}/statuses/$SHA \
                 -f state=pending \
