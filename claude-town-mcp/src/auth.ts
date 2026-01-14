@@ -2,15 +2,53 @@
  * Authentication utilities for claude-town-mcp
  *
  * Loads OAuth credentials from well-known Claude credentials locations.
- * Supports both CLI credentials and desktop app credentials.
+ * Supports CLI credentials, macOS Keychain, and desktop app credentials.
  */
 
 import { readFileSync, existsSync } from "fs";
-import { homedir, platform } from "os";
+import { execSync } from "child_process";
+import { homedir, platform, userInfo } from "os";
 import { join } from "path";
 import type { ClaudeCredentials, UserProfile } from "./types.js";
 
 const API_BASE_URL = "https://api.anthropic.com";
+
+/**
+ * Get the macOS Keychain service name for Claude Code credentials
+ */
+function getKeychainServiceName(): string {
+  return "Claude Code-credentials";
+}
+
+/**
+ * Try to load credentials from macOS Keychain
+ * This is the primary storage on macOS
+ */
+function loadKeychainCredentials(): ClaudeCredentials | null {
+  if (platform() !== "darwin") {
+    return null;
+  }
+
+  try {
+    const serviceName = getKeychainServiceName();
+    const username = process.env.USER || userInfo().username;
+
+    // Use security command to read from Keychain
+    const result = execSync(
+      `security find-generic-password -a "${username}" -w -s "${serviceName}"`,
+      { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
+    ).trim();
+
+    if (result) {
+      return JSON.parse(result) as ClaudeCredentials;
+    }
+  } catch {
+    // Keychain access failed (locked, not found, or no permission)
+    return null;
+  }
+
+  return null;
+}
 
 /**
  * Get all possible credential file paths in priority order
@@ -69,9 +107,18 @@ function loadDesktopAppCredentials(configPath: string): ClaudeCredentials | null
 
 /**
  * Load credentials from the well-known locations
- * Tries CLI credentials first, then desktop app
+ * Priority: macOS Keychain > CLI file > desktop app
  */
 export function loadCredentials(): ClaudeCredentials | null {
+  // On macOS, try Keychain first (this is where Claude Code CLI stores credentials)
+  if (platform() === "darwin") {
+    const keychainCreds = loadKeychainCredentials();
+    if (keychainCreds) {
+      return keychainCreds;
+    }
+  }
+
+  // Fall back to file-based credentials
   const paths = getCredentialsPaths();
 
   for (const credentialsPath of paths) {
@@ -98,6 +145,37 @@ export function loadCredentials(): ClaudeCredentials | null {
   }
 
   return null;
+}
+
+/**
+ * Check if keychain credentials exist but are inaccessible
+ */
+function hasInaccessibleKeychainCredentials(): boolean {
+  if (platform() !== "darwin") {
+    return false;
+  }
+
+  try {
+    const serviceName = getKeychainServiceName();
+    // Check if the entry exists (without getting the password)
+    execSync(
+      `security find-generic-password -s "${serviceName}"`,
+      { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
+    );
+    // Entry exists - check if we can read it
+    const username = process.env.USER || userInfo().username;
+    try {
+      execSync(
+        `security find-generic-password -a "${username}" -w -s "${serviceName}"`,
+        { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
+      );
+      return false; // We can read it, so it's accessible
+    } catch {
+      return true; // Entry exists but we can't read the password
+    }
+  } catch {
+    return false; // Entry doesn't exist
+  }
 }
 
 /**
@@ -130,6 +208,16 @@ export function getAccessToken(): string {
   const credentials = loadCredentials();
 
   if (!credentials?.claudeAiOauth?.accessToken) {
+    // Check if user has Keychain credentials that we can't access
+    if (hasInaccessibleKeychainCredentials()) {
+      throw new Error(
+        "Found Claude Code credentials in macOS Keychain, but they are inaccessible. " +
+          "This usually happens when running via SSH (Keychain requires GUI authorization). " +
+          "Try running Claude Code CLI interactively on the Mac to grant Keychain access, " +
+          "or create fallback credentials at ~/.claude/.credentials.json"
+      );
+    }
+
     // Check if user has desktop app credentials that we can't use
     if (hasEncryptedDesktopCredentials()) {
       throw new Error(
