@@ -1,0 +1,50 @@
+name: Bugbot Status Check
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  check-bugbot-lgtm:
+    # Only run on PR comments from cursor[bot]
+    if: |
+      github.event.issue.pull_request &&
+      github.event.comment.user.login == 'cursor[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      statuses: write
+      pull-requests: read
+    steps:
+      - name: Get PR head SHA
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR_DATA=$(gh api repos/${{ github.repository }}/pulls/${{ github.event.issue.number }})
+          echo "sha=$(echo $PR_DATA | jq -r .head.sha)" >> $GITHUB_OUTPUT
+
+      - name: Check for LGTM and set status
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          COMMENT="${{ github.event.comment.body }}"
+          SHA="${{ steps.pr.outputs.sha }}"
+
+          # Check if comment contains LGTM (case insensitive)
+          if echo "$COMMENT" | grep -iq "LGTM"; then
+            echo "Bugbot approved! Setting success status..."
+            gh api repos/${{ github.repository }}/statuses/$SHA \
+              -f state=success \
+              -f context="bugbot-review" \
+              -f description="Bugbot approved this PR"
+          else
+            echo "No LGTM found in bugbot comment"
+            # Check if this looks like a rejection
+            if echo "$COMMENT" | grep -iqE "(issue|bug|problem|fix|error)"; then
+              echo "Bugbot found issues, setting pending status..."
+              gh api repos/${{ github.repository }}/statuses/$SHA \
+                -f state=pending \
+                -f context="bugbot-review" \
+                -f description="Bugbot review in progress or found issues"
+            fi
+          fi
