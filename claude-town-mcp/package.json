@@ -1,6 +1,6 @@
 {
   "name": "claude-town-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "MCP server for orchestrating Claude Code web sessions",
   "type": "module",
   "bin": {

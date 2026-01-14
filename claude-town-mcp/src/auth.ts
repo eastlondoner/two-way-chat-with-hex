@@ -1,18 +1,37 @@
 /**
  * Authentication utilities for claude-town-mcp
  *
- * Loads OAuth credentials from the well-known Claude credentials file.
+ * Loads OAuth credentials from well-known Claude credentials locations.
+ * Supports both CLI credentials and desktop app credentials.
  */
 
 import { readFileSync, existsSync } from "fs";
-import { homedir } from "os";
+import { homedir, platform } from "os";
 import { join } from "path";
 import type { ClaudeCredentials, UserProfile } from "./types.js";
 
 const API_BASE_URL = "https://api.anthropic.com";
 
 /**
- * Get the path to the Claude credentials file
+ * Get all possible credential file paths in priority order
+ */
+export function getCredentialsPaths(): string[] {
+  const home = homedir();
+  const paths: string[] = [];
+
+  // Primary: CLI credentials (works on all platforms)
+  paths.push(join(home, ".claude", ".credentials.json"));
+
+  // Secondary: Desktop app config on macOS
+  if (platform() === "darwin") {
+    paths.push(join(home, "Library", "Application Support", "Claude", "config.json"));
+  }
+
+  return paths;
+}
+
+/**
+ * Get the path to the Claude credentials file (primary location)
  */
 export function getCredentialsPath(): string {
   const home = homedir();
@@ -20,20 +39,87 @@ export function getCredentialsPath(): string {
 }
 
 /**
- * Load credentials from the well-known location
+ * Try to load credentials from the desktop app config
+ * The token is stored encrypted, so we can only use it if there's also
+ * a plaintext token available (which there usually isn't)
  */
-export function loadCredentials(): ClaudeCredentials | null {
-  const credentialsPath = getCredentialsPath();
-
-  if (!existsSync(credentialsPath)) {
+function loadDesktopAppCredentials(configPath: string): ClaudeCredentials | null {
+  if (!existsSync(configPath)) {
     return null;
   }
 
   try {
-    const content = readFileSync(credentialsPath, "utf-8");
-    return JSON.parse(content) as ClaudeCredentials;
+    const content = readFileSync(configPath, "utf-8");
+    const config = JSON.parse(content);
+
+    // Desktop app stores token under "oauth:tokenCache" key, encrypted
+    const tokenCache = config["oauth:tokenCache"];
+    if (tokenCache && typeof tokenCache === "string") {
+      // Token is encrypted (starts with version prefix like "djEw")
+      // We cannot decrypt it without access to the app's keychain
+      // Return null to indicate we found credentials but can't use them
+      return null;
+    }
+
+    return null;
   } catch {
     return null;
+  }
+}
+
+/**
+ * Load credentials from the well-known locations
+ * Tries CLI credentials first, then desktop app
+ */
+export function loadCredentials(): ClaudeCredentials | null {
+  const paths = getCredentialsPaths();
+
+  for (const credentialsPath of paths) {
+    if (!existsSync(credentialsPath)) {
+      continue;
+    }
+
+    // Handle desktop app config differently
+    if (credentialsPath.includes("Application Support")) {
+      const desktopCreds = loadDesktopAppCredentials(credentialsPath);
+      if (desktopCreds) {
+        return desktopCreds;
+      }
+      continue;
+    }
+
+    // CLI credentials - plaintext JSON
+    try {
+      const content = readFileSync(credentialsPath, "utf-8");
+      return JSON.parse(content) as ClaudeCredentials;
+    } catch {
+      continue;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Check if desktop app credentials exist but are encrypted
+ */
+function hasEncryptedDesktopCredentials(): boolean {
+  if (platform() !== "darwin") {
+    return false;
+  }
+
+  const configPath = join(homedir(), "Library", "Application Support", "Claude", "config.json");
+  if (!existsSync(configPath)) {
+    return false;
+  }
+
+  try {
+    const content = readFileSync(configPath, "utf-8");
+    const config = JSON.parse(content);
+    const tokenCache = config["oauth:tokenCache"];
+    return tokenCache && typeof tokenCache === "string" && tokenCache.startsWith("djE");
+  } catch {
+    return false;
   }
 }
 
@@ -44,9 +130,17 @@ export function getAccessToken(): string {
   const credentials = loadCredentials();
 
   if (!credentials?.claudeAiOauth?.accessToken) {
+    // Check if user has desktop app credentials that we can't use
+    if (hasEncryptedDesktopCredentials()) {
+      throw new Error(
+        "Found Claude desktop app credentials, but they are encrypted. " +
+          "Please run Claude Code CLI and use /login to create plaintext credentials at ~/.claude/.credentials.json"
+      );
+    }
+
     throw new Error(
       "Claude Code web sessions require authentication with a Claude.ai account. " +
-        "Please run /login in Claude Code to authenticate."
+        "Please run /login in Claude Code CLI to authenticate."
     );
   }
 
