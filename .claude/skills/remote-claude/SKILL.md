@@ -16,11 +16,14 @@ Run a Claude Code instance on the desktop Mac via SSH, using tmux for session pe
 
 ## Quick Reference
 
+> **Security Warning**: The `--dangerously-skip-permissions` flag bypasses all permission prompts and trust dialogs. Only use this on a trusted, personal Mac with trusted repositories. For interactive use where you want prompts, omit the flag.
+
 ### Start Claude Session
 
 ```bash
-# Start new Claude session on desktop
-ssh desktop "zsh -l -c '/opt/homebrew/bin/tmux new-session -d -s claude-desktop \"bash -c \\\"source ~/.zshrc; claude; exec bash\\\"\"'"
+# Start new Claude session on desktop (with --dangerously-skip-permissions for automation)
+# WARNING: This bypasses permission prompts - use only on trusted machines/repos
+ssh desktop "zsh -l -c '/opt/homebrew/bin/tmux new-session -d -s claude-desktop \"bash -c \\\"source ~/.zshrc; claude --dangerously-skip-permissions; exec bash\\\"\"'"
 
 # Verify session started
 ssh desktop "zsh -l -c '/opt/homebrew/bin/tmux list-sessions'"
@@ -92,7 +95,11 @@ ssh desktop "zsh -l -c '/opt/homebrew/bin/tmux capture-pane -t claude-desktop -p
 
 ## Trust Dialog
 
-On first run in a new directory, Claude shows a trust dialog. Accept with:
+On first run in a new directory, Claude shows a trust dialog.
+
+**With `--dangerously-skip-permissions`**: Trust dialogs are auto-accepted; no action needed.
+
+**Without the flag**: Accept manually with:
 
 ```bash
 ssh desktop "zsh -l -c '/opt/homebrew/bin/tmux send-keys -t claude-desktop Enter'"
