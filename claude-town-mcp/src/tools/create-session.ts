@@ -109,10 +109,35 @@ export async function handleCreateSession(params: {
   await sendMessage(auth, session.id, params.prompt);
 
   // Wait briefly for session to start processing
+  let finalStatus = session.session_status;
   try {
-    await waitForSessionStatus(auth, session.id, ["working", "running"], 10000, 1000);
-  } catch {
-    // Ignore timeout - session may still be initializing
+    const updatedSession = await waitForSessionStatus(
+      auth,
+      session.id,
+      ["working", "running"],
+      10000,
+      1000
+    );
+    finalStatus = updatedSession.session_status;
+  } catch (error) {
+    // Re-throw terminal state errors (cancelled, rejected)
+    // Only ignore timeout errors - session may still be initializing
+    if (error instanceof Error && error.message.includes("terminal state")) {
+      return {
+        content: [
+          {
+            type: "text",
+            text:
+              `Session created but reached a terminal state.\n\n` +
+              `Session ID: ${session.id}\n` +
+              `Error: ${error.message}\n\n` +
+              `The session may have been rejected or cancelled.`,
+          },
+        ],
+        isError: true,
+      };
+    }
+    // Timeout is OK - session may still be initializing
   }
 
   return {
@@ -122,7 +147,7 @@ export async function handleCreateSession(params: {
         text:
           `Session created successfully!\n\n` +
           `Session ID: ${session.id}\n` +
-          `Status: ${session.session_status}\n` +
+          `Status: ${finalStatus}\n` +
           `Environment: ${environmentId}\n` +
           `Repository: ${params.repo}\n` +
           `Branch: ${params.branch ?? "(default)"}\n` +
