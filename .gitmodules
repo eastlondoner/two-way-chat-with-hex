@@ -1,3 +1,6 @@
 [submodule "submodules/plugins/vibe-plugins"]
 	path = submodules/plugins/vibe-plugins
 	url = https://github.com/eastlondoner/vibe-plugins.git
+[submodule "submodules/emceepee"]
+	path = submodules/emceepee
+	url = https://github.com/eastlondoner/emceepee.git
