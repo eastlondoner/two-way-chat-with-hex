@@ -245,5 +245,92 @@ export async function waitForSessionStatus(
   );
 }
 
-// Note: create_session API endpoint not yet discovered
-// Will need to reverse engineer from Claude Code source or use web interface
+/**
+ * Environment info from environment_providers API
+ */
+export interface Environment {
+  kind: string;
+  environment_id: string;
+  name: string;
+  created_at: string;
+  state: string;
+  config: unknown | null;
+}
+
+/**
+ * List all environments (from environment_providers endpoint)
+ */
+export async function listEnvironments(auth: AuthContext): Promise<Environment[]> {
+  const response = await fetchWithRetry(
+    `${API_BASE_URL}/v1/environment_providers`,
+    {
+      method: "GET",
+      headers: getFullHeaders(auth),
+    }
+  );
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error("Session expired. Please run /login to sign in again.");
+    }
+    throw new Error(`Failed to list environments: ${response.statusText}`);
+  }
+
+  const data = (await response.json()) as { environments: Environment[] };
+  return data.environments;
+}
+
+/**
+ * Create a new session
+ */
+export async function createSession(
+  auth: AuthContext,
+  params: {
+    environmentId: string;
+    repoUrl: string;
+    repoOwner: string;
+    repoName: string;
+    branch?: string;
+    model?: string;
+  }
+): Promise<Session> {
+  const response = await fetchWithRetry(`${API_BASE_URL}/v1/sessions`, {
+    method: "POST",
+    headers: getFullHeaders(auth),
+    body: JSON.stringify({
+      environment_id: params.environmentId,
+      session_context: {
+        sources: [
+          {
+            type: "git_repository",
+            url: params.repoUrl,
+          },
+        ],
+        outcomes: [
+          {
+            type: "git_repository",
+            git_info: {
+              type: "github",
+              repo: `${params.repoOwner}/${params.repoName}`,
+              branches: params.branch ? [params.branch] : [],
+            },
+          },
+        ],
+        model: params.model ?? "claude-sonnet-4-20250514",
+        allowed_tools: [],
+        disallowed_tools: [],
+        cwd: "",
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error("Session expired. Please run /login to sign in again.");
+    }
+    const errorText = await response.text();
+    throw new Error(`Failed to create session: ${response.statusText} - ${errorText}`);
+  }
+
+  return (await response.json()) as Session;
+}

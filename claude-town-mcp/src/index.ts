@@ -34,6 +34,10 @@ import {
   createSessionDescription,
   handleCreateSession,
 } from "./tools/create-session.js";
+import {
+  listEnvironmentsDescription,
+  handleListEnvironments,
+} from "./tools/list-environments.js";
 
 /**
  * Register all tools with the MCP server
@@ -89,7 +93,7 @@ function registerTools(server: McpServer): void {
     }
   );
 
-  // create_session - Create a new session (placeholder)
+  // create_session - Create a new session
   server.registerTool(
     "create_session",
     {
@@ -98,6 +102,18 @@ function registerTools(server: McpServer): void {
     },
     async (params) => {
       return handleCreateSession(params as Parameters<typeof handleCreateSession>[0]);
+    }
+  );
+
+  // list_environments - List available environments
+  server.registerTool(
+    "list_environments",
+    {
+      description: listEnvironmentsDescription,
+      inputSchema: {},
+    },
+    async () => {
+      return handleListEnvironments();
     }
   );
 }

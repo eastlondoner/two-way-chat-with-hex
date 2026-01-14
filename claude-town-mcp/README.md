@@ -8,7 +8,8 @@ MCP server for orchestrating Claude Code web sessions via the undocumented Claud
 - **get_session** - Get detailed information about a specific session
 - **send_message** - Send a message/task to a running session (fire-and-forget)
 - **get_session_status** - Check the current status of a session
-- **create_session** - Create a new session (placeholder - API not yet discovered)
+- **create_session** - Create a new Claude Code web session on a GitHub repository
+- **list_environments** - List available environments for session creation
 
 ## Installation
 
@@ -82,6 +83,25 @@ Use send_message to send "Run the tests" to session "abc123"
 
 ```
 Use get_session_status for session "abc123"
+```
+
+### Create Session
+
+```
+Use create_session to start a new session on eastlondoner/claude with prompt "Fix the failing tests"
+```
+
+Options:
+- `repo`: GitHub repository in owner/name format (required)
+- `prompt`: Initial task/prompt for the session (required)
+- `branch`: Git branch to use (optional)
+- `environment_id`: Environment ID to use (optional, uses first active environment)
+- `model`: Model to use - claude-sonnet-4-20250514 or claude-opus-4-5-20251101 (optional)
+
+### List Environments
+
+```
+Use list_environments to see available environments
 ```
 
 ## Session Statuses

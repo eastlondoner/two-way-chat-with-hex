@@ -1,14 +1,17 @@
 /**
  * create_session tool implementation
  *
- * Note: The create session API endpoint has not been discovered yet.
- * Sessions are currently created through the Claude Code web interface
- * or via the claude.ai/code page.
- *
- * This is a placeholder that will be implemented once the API is reverse-engineered.
+ * Creates a new Claude Code web session on a GitHub repository.
  */
 
 import { z } from "zod";
+import {
+  listEnvironments,
+  createSession,
+  sendMessage,
+  waitForSessionStatus,
+} from "../api-client.js";
+import { getAuthContext } from "../auth.js";
 import type { ToolResponse } from "../types.js";
 
 /**
@@ -23,50 +26,112 @@ export const createSessionSchema = {
     .optional()
     .describe("Git branch to use (optional, defaults to repo default branch)"),
   prompt: z.string().describe("Initial task/prompt for the session"),
+  environment_id: z
+    .string()
+    .optional()
+    .describe(
+      "Environment ID to use (optional, uses first active environment if not specified). " +
+        "Use list_environments to see available environments."
+    ),
+  model: z
+    .string()
+    .optional()
+    .describe(
+      "Model to use (optional, defaults to claude-sonnet-4-20250514). " +
+        "Options: claude-sonnet-4-20250514, claude-opus-4-5-20251101"
+    ),
 };
 
 export const createSessionDescription =
   "Create a new Claude Code web session on a GitHub repository. " +
   "Requires the Anthropic GitHub App to be installed on the repository. " +
-  "The session will be polled until it reaches 'running' or 'working' status.";
+  "Returns the session ID and status after creation.";
 
 /**
  * Handler for create_session tool
- *
- * TODO: Implement once the create session API is discovered.
- * The API likely requires:
- * - POST to an endpoint like /v1/sessions or /v1/environment_providers/{id}/sessions
- * - Request body with repo URL, branch, and initial prompt
- * - Polling until session transitions from 'initializing' to 'running'
  */
 export async function handleCreateSession(params: {
   repo: string;
   branch?: string;
   prompt: string;
+  environment_id?: string;
+  model?: string;
 }): Promise<ToolResponse> {
-  // TODO: Implement when API is discovered
-  // For now, return an informative error
+  const auth = await getAuthContext();
+
+  // Parse repo into owner/name
+  const repoMatch = params.repo.match(/^([^/]+)\/([^/]+)$/);
+  if (!repoMatch) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Invalid repo format: ${params.repo}. Expected owner/name format (e.g., 'eastlondoner/claude')`,
+        },
+      ],
+      isError: true,
+    };
+  }
+  const [, repoOwner, repoName] = repoMatch;
+
+  // Get environment ID
+  let environmentId = params.environment_id;
+  if (!environmentId) {
+    const environments = await listEnvironments(auth);
+    const activeEnv = environments.find((e) => e.state === "active");
+    if (!activeEnv) {
+      return {
+        content: [
+          {
+            type: "text",
+            text:
+              "No active environments found. Please create an environment first " +
+              "by starting a session from the Claude Code web interface.",
+          },
+        ],
+        isError: true,
+      };
+    }
+    environmentId = activeEnv.environment_id;
+  }
+
+  // Create the session
+  const session = await createSession(auth, {
+    environmentId,
+    repoUrl: `https://github.com/${params.repo}`,
+    repoOwner: repoOwner!,
+    repoName: repoName!,
+    branch: params.branch,
+    model: params.model,
+  });
+
+  // Send the initial prompt
+  await sendMessage(auth, session.id, params.prompt);
+
+  // Wait briefly for session to start processing
+  try {
+    await waitForSessionStatus(auth, session.id, ["working", "running"], 10000, 1000);
+  } catch {
+    // Ignore timeout - session may still be initializing
+  }
 
   return {
     content: [
       {
         type: "text",
         text:
-          `Creating new Claude Code web sessions is not yet supported via the MCP server.\n\n` +
-          `The create session API endpoint has not been discovered yet. ` +
-          `Sessions can currently only be created through:\n` +
-          `- The Claude Code web interface at https://claude.ai/code\n` +
-          `- The Claude iOS app\n\n` +
-          `Once a session is created, you can use:\n` +
-          `- list_sessions: to find the session ID\n` +
-          `- send_message: to send tasks to the session\n` +
-          `- get_session_status: to monitor progress\n\n` +
-          `Requested session would have been:\n` +
-          `- Repository: ${params.repo}\n` +
-          `- Branch: ${params.branch ?? "(default)"}\n` +
-          `- Prompt: ${params.prompt}`,
+          `Session created successfully!\n\n` +
+          `Session ID: ${session.id}\n` +
+          `Status: ${session.session_status}\n` +
+          `Environment: ${environmentId}\n` +
+          `Repository: ${params.repo}\n` +
+          `Branch: ${params.branch ?? "(default)"}\n` +
+          `Model: ${params.model ?? "claude-sonnet-4-20250514"}\n` +
+          `Prompt: ${params.prompt}\n\n` +
+          `Use get_session_status to monitor progress.\n` +
+          `Use send_message to send additional messages.`,
       },
     ],
-    isError: true,
+    isError: false,
   };
 }
