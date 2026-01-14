@@ -12,8 +12,8 @@ A pre-warmed Claude Code TUI session runs in tmux, started automatically by the 
 ### Send Query to Pre-started Session
 
 ```bash
-# Send query (double Enter to submit)
-tmux send-keys -t claude-local 'your query here' Enter Enter
+# Send query (text and Enter must be separate tmux calls)
+tmux send-keys -t claude-local 'your query here' && tmux send-keys -t claude-local Enter
 
 # Capture response
 sleep 15 && tmux capture-pane -t claude-local -p -S -80
@@ -24,7 +24,7 @@ sleep 15 && tmux capture-pane -t claude-local -p -S -80
 | Action | Command |
 |--------|---------|
 | Check status | `tmux capture-pane -t claude-local -p -S -30` |
-| Send query | `tmux send-keys -t claude-local 'text' Enter Enter` |
+| Send query | `tmux send-keys -t claude-local 'text' && tmux send-keys -t claude-local Enter` |
 | Attach | `tmux attach -t claude-local` |
 | Restart | `tmux kill-session -t claude-local` (will restart on next session) |
 
