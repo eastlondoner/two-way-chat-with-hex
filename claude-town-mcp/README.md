@@ -22,9 +22,36 @@ Or add to your Claude Code MCP configuration:
 claude mcp add claude-town -- npx claude-town-mcp
 ```
 
+### Connect to servers mid-session
+
+You can also connect to this MCP server during an active Claude Code session using the `/mcp` command:
+
+```
+/mcp add claude-town -- npx claude-town-mcp
+```
+
+For a local stdio server from a cloned repository:
+
+```
+/mcp add claude-town -- node /path/to/claude-town-mcp/dist/index.js
+```
+
+Or using bun during development:
+
+```
+/mcp add claude-town -- bun run /path/to/claude-town-mcp/src/index.ts
+```
+
 ## Authentication
 
-This MCP server reads OAuth credentials from `~/.claude/.credentials.json`, which is populated when you log into Claude Code. You must be authenticated with Claude Code for this to work.
+This MCP server automatically loads OAuth credentials from Claude Code's standard locations:
+
+1. **macOS Keychain** (primary on macOS) - Service: "Claude Code-credentials"
+2. **File-based credentials** - `~/.claude/.credentials.json`
+
+You must be authenticated with Claude Code (`/login`) for this to work.
+
+**Note:** When running via SSH on macOS, Keychain access may require GUI authorization. If credentials are inaccessible, you can create a fallback file at `~/.claude/.credentials.json`.
 
 ## Usage
 
