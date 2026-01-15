@@ -17,33 +17,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Install Claude CLI
-        run: npm install -g @anthropic-ai/claude-code
-
-      - name: Patch CLI refresh threshold
-        run: |
-          # The CLI only refreshes tokens within 5 minutes of expiry (300000ms)
-          # Patch it to refresh within 8 hours (28800000ms) so scheduled runs work
-          CLI_PATH=$(npm root -g)/@anthropic-ai/claude-code/cli.js
-          echo "Patching $CLI_PATH"
-
-          # Change: function ec(A){if(A===null)return!1;let Q=300000;
-          # To:     function ec(A){if(A===null)return!1;let Q=28800000;
-          sed -i 's/function ec(A){if(A===null)return!1;let Q=300000;/function ec(A){if(A===null)return!1;let Q=28800000;/' "$CLI_PATH"
-
-          # Verify the patch
-          if grep -q 'function ec(A){if(A===null)return!1;let Q=28800000;' "$CLI_PATH"; then
-            echo "Patch applied successfully - refresh threshold now 8 hours"
-          else
-            echo "Warning: Patch may not have applied correctly"
-            grep -o 'function ec(A){if(A===null)return.{0,30}' "$CLI_PATH" || true
-          fi
-
       - name: Restore credentials
         id: restore
         env:
@@ -61,34 +34,101 @@ jobs:
           echo "$ENCODED_CREDS" | base64 -d > ~/.claude/.credentials.json
           chmod 600 ~/.claude/.credentials.json
 
-          # Show current expiry for logging
+          # Extract tokens and expiry
+          REFRESH_TOKEN=$(cat ~/.claude/.credentials.json | jq -r '.claudeAiOauth.refreshToken')
           EXPIRES_AT=$(cat ~/.claude/.credentials.json | jq -r '.claudeAiOauth.expiresAt')
           EXPIRES_DATE=$(date -d @$((EXPIRES_AT / 1000)) 2>/dev/null || echo "unknown")
+
           echo "Current token expires at: $EXPIRES_AT ($EXPIRES_DATE)"
+
+          if [ -z "$REFRESH_TOKEN" ] || [ "$REFRESH_TOKEN" = "null" ]; then
+            echo "::error::No refresh token found in credentials"
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
 
           echo "skip=false" >> $GITHUB_OUTPUT
           echo "old_expires_at=$EXPIRES_AT" >> $GITHUB_OUTPUT
+          # Store refresh token in temp file to avoid exposing in logs
+          echo "$REFRESH_TOKEN" > /tmp/refresh_token
 
-      - name: Refresh token via Claude CLI
+      - name: Refresh token via API
         if: steps.restore.outputs.skip != 'true'
         id: refresh
         run: |
-          # Run a simple Claude command - this triggers internal token refresh
-          # With our patched threshold, it will refresh if token expires within 8 hours
-          timeout 30 claude --print "Say 'ok'" 2>&1 || true
+          REFRESH_TOKEN=$(cat /tmp/refresh_token)
+          rm -f /tmp/refresh_token
 
-          # Check if credentials were updated
-          NEW_EXPIRES_AT=$(cat ~/.claude/.credentials.json | jq -r '.claudeAiOauth.expiresAt')
-          OLD_EXPIRES_AT="${{ steps.restore.outputs.old_expires_at }}"
+          # Claude Code CLI client_id (from oauth flow analysis)
+          CLIENT_ID="9d1c250a-e61b-44d9-88ed-5944d1962f5e"
 
-          if [ "$NEW_EXPIRES_AT" != "$OLD_EXPIRES_AT" ]; then
-            NEW_DATE=$(date -d @$((NEW_EXPIRES_AT / 1000)) 2>/dev/null || echo "unknown")
-            echo "Token was refreshed! New expiry: $NEW_EXPIRES_AT ($NEW_DATE)"
-            echo "refreshed=true" >> $GITHUB_OUTPUT
-          else
-            echo "Token was not refreshed (expiry unchanged: $NEW_EXPIRES_AT)"
+          echo "Calling token refresh API..."
+
+          # Call the OAuth token refresh endpoint directly
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+            "https://api.anthropic.com/v1/oauth/token" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"grant_type\": \"refresh_token\",
+              \"refresh_token\": \"$REFRESH_TOKEN\",
+              \"client_id\": \"$CLIENT_ID\"
+            }" 2>&1)
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+
+          echo "HTTP Status: $HTTP_CODE"
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::Token refresh API returned $HTTP_CODE"
+            echo "$BODY" | jq '.' 2>/dev/null || echo "$BODY"
             echo "refreshed=false" >> $GITHUB_OUTPUT
+            exit 0
           fi
+
+          # Extract new tokens from response
+          NEW_ACCESS_TOKEN=$(echo "$BODY" | jq -r '.access_token // empty')
+          NEW_REFRESH_TOKEN=$(echo "$BODY" | jq -r '.refresh_token // empty')
+          EXPIRES_IN=$(echo "$BODY" | jq -r '.expires_in // empty')
+
+          if [ -z "$NEW_ACCESS_TOKEN" ]; then
+            echo "::error::No access_token in response"
+            echo "$BODY" | jq '.' 2>/dev/null || echo "$BODY"
+            echo "refreshed=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Calculate new expiry timestamp (current time + expires_in seconds)
+          if [ -n "$EXPIRES_IN" ]; then
+            NEW_EXPIRES_AT=$(( $(date +%s) * 1000 + EXPIRES_IN * 1000 ))
+          else
+            # Default to 8 hours if not provided
+            NEW_EXPIRES_AT=$(( $(date +%s) * 1000 + 28800000 ))
+          fi
+
+          NEW_EXPIRES_DATE=$(date -d @$((NEW_EXPIRES_AT / 1000)) 2>/dev/null || echo "unknown")
+          echo "Token refreshed! New expiry: $NEW_EXPIRES_AT ($NEW_EXPIRES_DATE)"
+
+          # Update credentials file
+          CREDS=$(cat ~/.claude/.credentials.json)
+
+          # Update access token
+          CREDS=$(echo "$CREDS" | jq --arg token "$NEW_ACCESS_TOKEN" '.claudeAiOauth.accessToken = $token')
+
+          # Update refresh token if a new one was provided
+          if [ -n "$NEW_REFRESH_TOKEN" ]; then
+            CREDS=$(echo "$CREDS" | jq --arg token "$NEW_REFRESH_TOKEN" '.claudeAiOauth.refreshToken = $token')
+            echo "Refresh token was also updated"
+          fi
+
+          # Update expiry
+          CREDS=$(echo "$CREDS" | jq --argjson exp "$NEW_EXPIRES_AT" '.claudeAiOauth.expiresAt = $exp')
+
+          # Write updated credentials
+          echo "$CREDS" > ~/.claude/.credentials.json
+          chmod 600 ~/.claude/.credentials.json
+
+          echo "refreshed=true" >> $GITHUB_OUTPUT
 
       - name: Update credentials variable
         if: steps.restore.outputs.skip != 'true' && steps.refresh.outputs.refreshed == 'true'
