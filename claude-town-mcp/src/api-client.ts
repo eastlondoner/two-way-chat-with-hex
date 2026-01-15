@@ -292,6 +292,7 @@ export async function createSession(
     repoName: string;
     branch?: string;
     model?: string;
+    title: string;
   }
 ): Promise<Session> {
   const response = await fetchWithRetry(`${API_BASE_URL}/v1/sessions`, {
@@ -299,6 +300,7 @@ export async function createSession(
     headers: getFullHeaders(auth),
     body: JSON.stringify({
       environment_id: params.environmentId,
+      title: params.title,
       session_context: {
         sources: [
           {

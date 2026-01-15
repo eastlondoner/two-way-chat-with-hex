@@ -25,6 +25,13 @@ export const createSessionSchema = {
     .string()
     .optional()
     .describe("Git branch to use (optional, defaults to repo default branch)"),
+  title: z
+    .string()
+    .min(1, "Session title cannot be empty")
+    .refine((val) => val.trim().length > 0, {
+      message: "Session title cannot be empty or whitespace-only",
+    })
+    .describe("Title for the session (required, cannot be empty or whitespace-only)"),
   prompt: z.string().describe("Initial task/prompt for the session"),
   environment_id: z
     .string()
@@ -53,10 +60,24 @@ export const createSessionDescription =
 export async function handleCreateSession(params: {
   repo: string;
   branch?: string;
+  title: string;
   prompt: string;
   environment_id?: string;
   model?: string;
 }): Promise<ToolResponse> {
+  // Validate title is not empty or whitespace-only
+  if (!params.title || params.title.trim().length === 0) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: "Session title cannot be empty or whitespace-only. Please provide a meaningful title for the session.",
+        },
+      ],
+      isError: true,
+    };
+  }
+
   const auth = await getAuthContext();
 
   // Parse repo into owner/name
@@ -103,6 +124,7 @@ export async function handleCreateSession(params: {
     repoName: repoName!,
     branch: params.branch,
     model: params.model,
+    title: params.title.trim(),
   });
 
   // Send the initial prompt
@@ -147,6 +169,7 @@ export async function handleCreateSession(params: {
         text:
           `Session created successfully!\n\n` +
           `Session ID: ${session.id}\n` +
+          `Title: ${params.title.trim()}\n` +
           `Status: ${finalStatus}\n` +
           `Environment: ${environmentId}\n` +
           `Repository: ${params.repo}\n` +
