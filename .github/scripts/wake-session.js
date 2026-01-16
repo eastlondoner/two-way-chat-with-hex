@@ -135,15 +135,21 @@ async function sendMessage(accessToken, orgUUID, sessionId, message) {
   return true;
 }
 
+function normalizeBranch(branch) {
+  return branch.replace(/^refs\/heads\//, '');
+}
+
 function extractBranchesFromSession(session) {
   const outcome = session.session_context?.outcomes?.find(o => o.type === 'git_repository');
-  return outcome?.git_info?.branches ?? [];
+  const branches = outcome?.git_info?.branches ?? [];
+  return branches.map(normalizeBranch);
 }
 
 function findMatchingSessions(sessions, targetBranch) {
+  const normalizedTarget = normalizeBranch(targetBranch);
   return sessions.filter(session => {
     const branches = extractBranchesFromSession(session);
-    return branches.includes(targetBranch);
+    return branches.includes(normalizedTarget);
   });
 }
 

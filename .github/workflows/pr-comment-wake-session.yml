@@ -6,9 +6,12 @@ on:
 
 jobs:
   wake-session:
-    # Only run on PR comments (not issue comments)
-    if: ${{ github.event.issue.pull_request != null }}
+    # Only run on PR comments (not issue comments), and avoid loops from bot comments
+    if: ${{ github.event.issue.pull_request != null && github.event.comment.user.login != 'github-actions[bot]' }}
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
 
     steps:
       - name: Checkout repository
