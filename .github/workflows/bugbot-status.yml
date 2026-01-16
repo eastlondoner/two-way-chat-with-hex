@@ -30,21 +30,20 @@ jobs:
         run: |
           SHA="${{ steps.pr.outputs.sha }}"
 
-          # Check if comment contains LGTM (case insensitive)
-          if echo "$COMMENT_BODY" | grep -iq "LGTM"; then
+          # Check for rejection signals first (avoids false positives like "not good to merge")
+          if echo "$COMMENT_BODY" | grep -iqE "(changes? requested|needs? (changes?|work|fix)|not ready|block)"; then
+            echo "Bugbot requested changes, setting pending status..."
+            gh api repos/${{ github.repository }}/statuses/$SHA \
+              -f state=pending \
+              -f context="bugbot-review" \
+              -f description="Bugbot requested changes"
+          # Then check for explicit approval signals
+          elif echo "$COMMENT_BODY" | grep -iqE "(LGTM|good to merge|approved)"; then
             echo "Bugbot approved! Setting success status..."
             gh api repos/${{ github.repository }}/statuses/$SHA \
               -f state=success \
               -f context="bugbot-review" \
               -f description="Bugbot approved this PR"
           else
-            echo "No LGTM found in bugbot comment"
-            # Check if this looks like a rejection
-            if echo "$COMMENT_BODY" | grep -iqE "(issue|bug|problem|fix|error)"; then
-              echo "Bugbot found issues, setting pending status..."
-              gh api repos/${{ github.repository }}/statuses/$SHA \
-                -f state=pending \
-                -f context="bugbot-review" \
-                -f description="Bugbot review in progress or found issues"
-            fi
+            echo "No clear approval or rejection signal in bugbot comment"
           fi

@@ -10,9 +10,17 @@ Run a Claude Code instance on the desktop Mac via SSH, using tmux for session pe
 ## Prerequisites
 
 - SSH access to desktop configured (see `ssh-desktop` skill)
-- tmux installed on desktop: `/opt/homebrew/bin/tmux`
-- Claude CLI installed on desktop: `~/.local/bin/claude`
-- Login shell required to load PATH (use `zsh -l -c '...'`)
+- tmux installed on desktop (via Homebrew)
+- Claude CLI installed on desktop
+
+## IMPORTANT: Always Source the Shell
+
+**Always wrap SSH commands with `zsh -l -c '...'`** to load the login shell environment. This ensures:
+- `tmux` is available on PATH
+- `claude` CLI is available on PATH
+- All environment variables are properly set
+
+Without the login shell wrapper, commands may fail with "command not found" errors.
 
 ## Quick Reference
 
@@ -23,45 +31,46 @@ Run a Claude Code instance on the desktop Mac via SSH, using tmux for session pe
 ```bash
 # Start new Claude session on desktop (with --dangerously-skip-permissions for automation)
 # WARNING: This bypasses permission prompts - use only on trusted machines/repos
-ssh desktop "zsh -l -c '/opt/homebrew/bin/tmux new-session -d -s claude-desktop \"bash -c \\\"source ~/.zshrc; claude --dangerously-skip-permissions; exec bash\\\"\"'"
+ssh desktop "zsh -l -c 'tmux new-session -d -s claude-desktop \"claude --dangerously-skip-permissions\"'"
 
 # Verify session started
-ssh desktop "zsh -l -c '/opt/homebrew/bin/tmux list-sessions'"
+ssh desktop "zsh -l -c 'tmux list-sessions'"
 ```
 
 ### Send Queries
 
 ```bash
 # Send query using -l (literal) flag - IMPORTANT: -l is required!
-ssh desktop "zsh -l -c '/opt/homebrew/bin/tmux send-keys -t claude-desktop -l \"your query here\" && /opt/homebrew/bin/tmux send-keys -t claude-desktop Enter'"
+ssh desktop "zsh -l -c 'tmux send-keys -t claude-desktop -l \"your query here\" && tmux send-keys -t claude-desktop Enter'"
 
 # Wait and capture response
 sleep 15
-ssh desktop "zsh -l -c '/opt/homebrew/bin/tmux capture-pane -t claude-desktop -p -S -50'"
+ssh desktop "zsh -l -c 'tmux capture-pane -t claude-desktop -p -S -50'"
 ```
 
 ### Session Commands
 
 | Action | Command |
 |--------|---------|
-| Check status | `ssh desktop "zsh -l -c '/opt/homebrew/bin/tmux capture-pane -t claude-desktop -p -S -30'"` |
-| Send query | `ssh desktop "zsh -l -c '/opt/homebrew/bin/tmux send-keys -t claude-desktop -l \"text\" && /opt/homebrew/bin/tmux send-keys -t claude-desktop Enter'"` |
-| List sessions | `ssh desktop "zsh -l -c '/opt/homebrew/bin/tmux list-sessions'"` |
-| Kill session | `ssh desktop "zsh -l -c '/opt/homebrew/bin/tmux kill-session -t claude-desktop'"` |
+| Check status | `ssh desktop "zsh -l -c 'tmux capture-pane -t claude-desktop -p -S -30'"` |
+| Send query | `ssh desktop "zsh -l -c 'tmux send-keys -t claude-desktop -l \"text\" && tmux send-keys -t claude-desktop Enter'"` |
+| List sessions | `ssh desktop "zsh -l -c 'tmux list-sessions'"` |
+| Attach to session | `ssh -t desktop "zsh -l -c 'tmux attach -t claude-desktop'"` |
+| Kill session | `ssh desktop "zsh -l -c 'tmux kill-session -t claude-desktop'"` |
 
 ## Helper Functions
 
 For convenience, add these to your workflow:
 
 ```bash
-# Send command to desktop Claude (uses -l for literal mode)
+# Send command to desktop Claude (uses tmux buffer to handle quotes safely)
 desktop_claude_send() {
-    ssh desktop "zsh -l -c '/opt/homebrew/bin/tmux send-keys -t claude-desktop -l \"$1\" && /opt/homebrew/bin/tmux send-keys -t claude-desktop Enter'"
+    printf '%s' "$1" | ssh desktop "zsh -l -c 'tmux load-buffer - && tmux paste-buffer -t claude-desktop && tmux send-keys -t claude-desktop Enter'"
 }
 
-# Get desktop Claude output
+# Get desktop Claude output (use -J to join wrapped lines)
 desktop_claude_output() {
-    ssh desktop "zsh -l -c '/opt/homebrew/bin/tmux capture-pane -t claude-desktop -p -S -${1:-50}'"
+    ssh desktop "zsh -l -c 'tmux capture-pane -t claude-desktop -p -J -S -${1:-50}'"
 }
 
 # Full query with response
@@ -71,6 +80,8 @@ desktop_claude_query() {
     desktop_claude_output "${3:-50}"
 }
 ```
+
+> **Note**: The `desktop_claude_send` function pipes input through `tmux load-buffer` to avoid quoting issues. This safely handles queries containing quotes or special characters.
 
 ## Important Notes
 
@@ -88,9 +99,9 @@ The desktop Claude may need authentication:
 
 ```bash
 # Start login flow
-ssh desktop "zsh -l -c '/opt/homebrew/bin/tmux send-keys -t claude-desktop -l \"/login\" && /opt/homebrew/bin/tmux send-keys -t claude-desktop Enter'"
+ssh desktop "zsh -l -c 'tmux send-keys -t claude-desktop -l \"/login\" && tmux send-keys -t claude-desktop Enter'"
 sleep 3
-ssh desktop "zsh -l -c '/opt/homebrew/bin/tmux capture-pane -t claude-desktop -p -S -30'"
+ssh desktop "zsh -l -c 'tmux capture-pane -t claude-desktop -p -S -30'"
 ```
 
 ## Trust Dialog
@@ -102,7 +113,7 @@ On first run in a new directory, Claude shows a trust dialog.
 **Without the flag**: Accept manually with:
 
 ```bash
-ssh desktop "zsh -l -c '/opt/homebrew/bin/tmux send-keys -t claude-desktop Enter'"
+ssh desktop "zsh -l -c 'tmux send-keys -t claude-desktop Enter'"
 ```
 
 ## Troubleshooting
@@ -114,9 +125,7 @@ ssh desktop "zsh -l -c '/opt/homebrew/bin/tmux send-keys -t claude-desktop Enter
 
 ### Empty output
 - Wait longer before capture (Claude TUI takes time to render)
-- Check session exists: `tmux list-sessions`
+- Check session exists: `ssh desktop "zsh -l -c 'tmux list-sessions'"`
 
 ### PATH issues
-The desktop has minimal PATH in non-login shells. Always use:
-- `zsh -l -c '...'` wrapper for commands
-- Full paths: `/opt/homebrew/bin/tmux`, `~/.local/bin/claude`
+The desktop has minimal PATH in non-login shells. **Always use `zsh -l -c '...'`** wrapper for all commands. This loads the login shell environment where both `tmux` and `claude` are available on PATH.
