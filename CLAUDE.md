@@ -189,3 +189,78 @@ ssh desktop
 # or with command
 ssh desktop "hostname; uname -a"
 ```
+
+## Session Identification
+
+Environment variables available within a Claude Code web session to identify the current session:
+
+### Key Environment Variables
+
+| Variable | Example | Purpose |
+|----------|---------|---------|
+| `CLAUDE_CODE_REMOTE_SESSION_ID` | `session_012e8Mfz8nX8o77VpBsT56Ro` | **Primary API/MCP session identifier** - use this to match with claude-town API |
+| `CLAUDE_CODE_SESSION_ID` | `c4cc99d2-a561-477a-9fa3-866f96bd4149` | Internal UUID for the session |
+| `CLAUDE_CODE_CONTAINER_ID` | `container_01DvmJFqh8BwAusQSFYyYFFp--claude_code_remote--...` | Container identifier |
+
+### Usage
+
+To get the current session's API identifier from within a session:
+
+```bash
+echo $CLAUDE_CODE_REMOTE_SESSION_ID
+# Output: session_012e8Mfz8nX8o77VpBsT56Ro
+```
+
+This identifier matches the `id` field returned by the claude-town MCP server's `list_sessions` tool.
+
+### Cross-Reference with Git Branch
+
+The git branch name (e.g., `claude/check-web-sessions-QlHnX`) contains a shortened session suffix that can be used to identify sessions in claude-town output.
+
+## PR Comment Session Wake-up
+
+A GitHub Action automatically wakes Claude Code sessions when comments are posted on PRs.
+
+### How It Works
+
+1. When a comment is posted on a PR, the action triggers
+2. It extracts the PR branch name from GitHub
+3. Queries the Claude Code web API to find sessions matching that branch
+4. Sends a wake-up message to the most recently updated session with the comment context
+
+### Required GitHub Secrets
+
+Configure these secrets in the repository settings:
+
+| Secret | Description | How to Get |
+|--------|-------------|------------|
+| `CLAUDE_ACCESS_TOKEN` | OAuth access token for Claude API | Extract from `~/.claude/.credentials.json` (`claudeAiOauth.accessToken`) |
+| `CLAUDE_ORG_UUID` | Organization UUID (optional) | Will be fetched automatically if not set |
+
+### Extracting Credentials
+
+From a Claude Code session or local CLI:
+
+```bash
+# Get access token
+cat ~/.claude/.credentials.json | jq -r '.claudeAiOauth.accessToken'
+
+# Get org UUID (requires authentication)
+curl -s -H "Authorization: Bearer $(cat ~/.claude/.credentials.json | jq -r '.claudeAiOauth.accessToken')" \
+  -H "anthropic-version: 2023-06-01" \
+  https://api.anthropic.com/api/oauth/profile | jq -r '.organization.uuid'
+```
+
+### Workflow File
+
+The workflow is defined in `.github/workflows/pr-comment-wake-session.yml` and uses `.github/scripts/wake-session.js`.
+
+### What Gets Sent to the Session
+
+The wake-up message includes:
+- PR number and title
+- Comment author
+- Full comment body
+- Links to PR and comment
+
+The session will then process the comment and respond appropriately.
