@@ -1,5 +1,7 @@
 # Claude Code Sandbox Network Configuration
 
+<!-- Test change to verify PR comment wake-up workflow -->
+
 ## HTTP Proxy Authentication
 
 The Claude Code sandbox routes all external HTTP/HTTPS traffic through an authenticated proxy.
