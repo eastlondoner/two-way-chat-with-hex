@@ -30,8 +30,8 @@ jobs:
         run: |
           SHA="${{ steps.pr.outputs.sha }}"
 
-          # Check if comment contains LGTM (case insensitive)
-          if echo "$COMMENT_BODY" | grep -iq "LGTM"; then
+          # Check if comment contains LGTM or "good to merge" (case insensitive)
+          if echo "$COMMENT_BODY" | grep -iqE "(LGTM|good to merge)"; then
             echo "Bugbot approved! Setting success status..."
             gh api repos/${{ github.repository }}/statuses/$SHA \
               -f state=success \
