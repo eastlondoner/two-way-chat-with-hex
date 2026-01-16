@@ -7,7 +7,7 @@ on:
 jobs:
   wake-session:
     # Only run on PR comments (not issue comments)
-    if: github.event.issue.pull_request
+    if: ${{ github.event.issue.pull_request != null }}
     runs-on: ubuntu-latest
 
     steps:

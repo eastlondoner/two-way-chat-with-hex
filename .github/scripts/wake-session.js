@@ -15,6 +15,7 @@
  */
 
 const { randomUUID } = require('crypto');
+const fs = require('fs');
 
 const API_BASE_URL = 'https://api.anthropic.com';
 
@@ -134,15 +135,15 @@ async function sendMessage(accessToken, orgUUID, sessionId, message) {
   return true;
 }
 
-function extractBranchFromSession(session) {
+function extractBranchesFromSession(session) {
   const outcome = session.session_context?.outcomes?.find(o => o.type === 'git_repository');
-  return outcome?.git_info?.branches?.[0] || null;
+  return outcome?.git_info?.branches ?? [];
 }
 
 function findMatchingSessions(sessions, targetBranch) {
   return sessions.filter(session => {
-    const branch = extractBranchFromSession(session);
-    return branch && branch === targetBranch;
+    const branches = extractBranchesFromSession(session);
+    return branches.includes(targetBranch);
   });
 }
 
@@ -195,7 +196,9 @@ async function main() {
     if (matchingSessions.length === 0) {
       console.log('No sessions found for this branch. Nothing to wake.');
       // Output for GitHub Actions
-      console.log('::set-output name=session_found::false');
+      if (process.env.GITHUB_OUTPUT) {
+        fs.appendFileSync(process.env.GITHUB_OUTPUT, 'session_found=false\n');
+      }
       return;
     }
 
@@ -212,10 +215,15 @@ async function main() {
     console.log('Message sent successfully!');
 
     // Output for GitHub Actions
-    console.log(`::set-output name=session_found::true`);
-    console.log(`::set-output name=session_id::${targetSession.id}`);
-    console.log(`::set-output name=session_title::${targetSession.title}`);
-    console.log(`::set-output name=session_status::${targetSession.session_status}`);
+    if (process.env.GITHUB_OUTPUT) {
+      const output = [
+        'session_found=true',
+        `session_id=${targetSession.id}`,
+        `session_title=${targetSession.title}`,
+        `session_status=${targetSession.session_status}`,
+      ].join('\n') + '\n';
+      fs.appendFileSync(process.env.GITHUB_OUTPUT, output);
+    }
 
   } catch (error) {
     console.error(`Error: ${error.message}`);
