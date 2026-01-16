@@ -1,0 +1,104 @@
+name: Wake Claude Session on PR Comment
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  wake-session:
+    # Only run on PR comments (not issue comments)
+    if: github.event.issue.pull_request
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get PR details
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR_NUMBER="${{ github.event.issue.number }}"
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+
+          # Get PR branch name
+          PR_BRANCH=$(gh pr view $PR_NUMBER --json headRefName -q '.headRefName')
+          echo "pr_branch=$PR_BRANCH" >> $GITHUB_OUTPUT
+
+          # Get PR title
+          PR_TITLE=$(gh pr view $PR_NUMBER --json title -q '.title')
+          echo "pr_title=$PR_TITLE" >> $GITHUB_OUTPUT
+
+          echo "PR #$PR_NUMBER: $PR_TITLE (branch: $PR_BRANCH)"
+
+      - name: Get comment details
+        id: comment
+        run: |
+          COMMENT_AUTHOR="${{ github.event.comment.user.login }}"
+          COMMENT_BODY="${{ github.event.comment.body }}"
+          COMMENT_URL="${{ github.event.comment.html_url }}"
+
+          echo "author=$COMMENT_AUTHOR" >> $GITHUB_OUTPUT
+          echo "url=$COMMENT_URL" >> $GITHUB_OUTPUT
+
+          # Store comment body in a file to handle multiline
+          echo "$COMMENT_BODY" > /tmp/comment_body.txt
+
+          echo "Comment by $COMMENT_AUTHOR: $COMMENT_URL"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Wake Claude session
+        id: wake
+        env:
+          CLAUDE_ACCESS_TOKEN: ${{ secrets.CLAUDE_ACCESS_TOKEN }}
+          CLAUDE_ORG_UUID: ${{ secrets.CLAUDE_ORG_UUID }}
+        run: |
+          # Build the wake-up message
+          PR_NUMBER="${{ steps.pr.outputs.pr_number }}"
+          PR_BRANCH="${{ steps.pr.outputs.pr_branch }}"
+          PR_TITLE="${{ steps.pr.outputs.pr_title }}"
+          COMMENT_AUTHOR="${{ steps.comment.outputs.author }}"
+          COMMENT_URL="${{ steps.comment.outputs.url }}"
+          COMMENT_BODY=$(cat /tmp/comment_body.txt)
+
+          # Construct the message
+          MESSAGE="A new comment was posted on PR #${PR_NUMBER} (${PR_TITLE}).
+
+          Comment by @${COMMENT_AUTHOR}:
+          ${COMMENT_BODY}
+
+          PR URL: https://github.com/${{ github.repository }}/pull/${PR_NUMBER}
+          Comment URL: ${COMMENT_URL}
+
+          Please review the comment and respond appropriately. If it's a review comment or feedback, address it. If it's a question, answer it. If action is needed, take it and push any changes."
+
+          # Run the wake script
+          node .github/scripts/wake-session.js "$PR_BRANCH" "$MESSAGE"
+
+      - name: Post status comment
+        if: steps.wake.outputs.session_found == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SESSION_ID="${{ steps.wake.outputs.session_id }}"
+          SESSION_TITLE="${{ steps.wake.outputs.session_title }}"
+          SESSION_STATUS="${{ steps.wake.outputs.session_status }}"
+          PR_NUMBER="${{ steps.pr.outputs.pr_number }}"
+
+          # Only post if session was idle (actually woken up)
+          if [ "$SESSION_STATUS" = "idle" ]; then
+            gh pr comment $PR_NUMBER --body "🤖 Waking Claude session to address this comment.
+
+          **Session:** ${SESSION_TITLE}
+          **Session ID:** \`${SESSION_ID}\`
+          **Previous Status:** ${SESSION_STATUS}
+
+          [View session](https://claude.ai/code/${SESSION_ID})"
+          fi

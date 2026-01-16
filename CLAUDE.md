@@ -216,3 +216,51 @@ This identifier matches the `id` field returned by the claude-town MCP server's 
 ### Cross-Reference with Git Branch
 
 The git branch name (e.g., `claude/check-web-sessions-QlHnX`) contains a shortened session suffix that can be used to identify sessions in claude-town output.
+
+## PR Comment Session Wake-up
+
+A GitHub Action automatically wakes Claude Code sessions when comments are posted on PRs.
+
+### How It Works
+
+1. When a comment is posted on a PR, the action triggers
+2. It extracts the PR branch name from GitHub
+3. Queries the Claude Code web API to find sessions matching that branch
+4. Sends a wake-up message to the most recently updated session with the comment context
+
+### Required GitHub Secrets
+
+Configure these secrets in the repository settings:
+
+| Secret | Description | How to Get |
+|--------|-------------|------------|
+| `CLAUDE_ACCESS_TOKEN` | OAuth access token for Claude API | Extract from `~/.claude/.credentials.json` (`claudeAiOauth.accessToken`) |
+| `CLAUDE_ORG_UUID` | Organization UUID (optional) | Will be fetched automatically if not set |
+
+### Extracting Credentials
+
+From a Claude Code session or local CLI:
+
+```bash
+# Get access token
+cat ~/.claude/.credentials.json | jq -r '.claudeAiOauth.accessToken'
+
+# Get org UUID (requires authentication)
+curl -s -H "Authorization: Bearer $(cat ~/.claude/.credentials.json | jq -r '.claudeAiOauth.accessToken')" \
+  -H "anthropic-version: 2023-06-01" \
+  https://api.anthropic.com/api/oauth/profile | jq -r '.organization.uuid'
+```
+
+### Workflow File
+
+The workflow is defined in `.github/workflows/pr-comment-wake-session.yml` and uses `.github/scripts/wake-session.js`.
+
+### What Gets Sent to the Session
+
+The wake-up message includes:
+- PR number and title
+- Comment author
+- Full comment body
+- Links to PR and comment
+
+The session will then process the comment and respond appropriately.
