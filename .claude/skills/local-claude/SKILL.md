@@ -12,8 +12,8 @@ A pre-warmed Claude Code TUI session runs in tmux, started automatically by the 
 ### Send Query and Wait for Response
 
 ```bash
-# Send query
-tmux send-keys -t claude-local 'your query here' && tmux send-keys -t claude-local Enter
+# Send query using -l (literal) for reliability with special characters
+tmux send-keys -t claude-local -l 'your query here' && tmux send-keys -t claude-local Enter
 
 # Wait for response to stabilize, then capture (recommended)
 .claude/skills/local-claude/scripts/tmux-poll-wait.sh claude-local
@@ -21,12 +21,68 @@ tmux send-keys -t claude-local 'your query here' && tmux send-keys -t claude-loc
 
 The polling script waits until output stabilizes (3 consecutive unchanged polls at 3s intervals) or times out after 60s, then outputs the final capture.
 
+### Extract Response for Specific Command
+
+The basic capture includes scrollback history. To extract just the response for a specific command, use pattern matching:
+
+```bash
+QUERY="your query here"
+# Escape special regex characters in query
+SAFE_QUERY=$(printf '%s' "$QUERY" | sed 's/[.[\*^$()+?|\\]/\\&/g')
+tmux capture-pane -t claude-local -p -S -100 \
+  | sed -n "/❯ $SAFE_QUERY/,/^❯ [a-z]/p" \
+  | head -n -1 \
+  | grep -v '^────' \
+  | grep -v '⏵⏵'
+```
+
+**How it works:**
+- First escape special regex characters (`. [ * ^ $ ( ) + ? | \`) in the query
+- `sed -n "/❯ $SAFE_QUERY/,/^❯ [a-z]/p"` - extract from your command prompt to the next command
+- `head -n -1` - remove the trailing "next command" line
+- `grep -v` - filter out UI chrome (separators, mode indicators)
+
+**Note:** If the same query appears multiple times in scrollback, this captures ALL occurrences. To get only the most recent response, use this awk-based extraction:
+
+```bash
+QUERY="your query here"
+SAFE_QUERY=$(printf '%s' "$QUERY" | sed 's/[.[\*^$()+?|\\]/\\&/g')
+tmux capture-pane -t claude-local -p -S -200 \
+  | awk -v q="$SAFE_QUERY" '
+    /^❯ / { printing = ($0 ~ "^❯ " q "$"); if (printing) { delete out; n=0 } next }
+    { if (printing) {
+        if (/^❯ [a-z]/) { printing=0 }
+        else if ($0 !~ /^────/ && $0 !~ /⏵⏵/) { out[++n]=$0 }
+      }
+    }
+    END { for (i=1; i<=n; i++) print out[i] }'
+```
+
+### Alternative Capture Methods
+
+**Clear history first** (captures everything since clear):
+```bash
+tmux clear-history -t claude-local
+tmux send-keys -t claude-local -l 'query' && tmux send-keys -t claude-local Enter
+sleep 15
+tmux capture-pane -t claude-local -p -S -
+```
+
+**Pipe to file** (real-time capture, includes ANSI codes):
+```bash
+tmux pipe-pane -t claude-local 'cat > /tmp/output.txt'
+tmux send-keys -t claude-local -l 'query' && tmux send-keys -t claude-local Enter
+sleep 15
+tmux pipe-pane -t claude-local  # stop piping
+cat /tmp/output.txt
+```
+
 ### Session Commands
 
 | Action | Command |
 |--------|---------|
 | Check status | `tmux capture-pane -t claude-local -p -S -30` |
-| Send query | `tmux send-keys -t claude-local 'text' && tmux send-keys -t claude-local Enter` |
+| Send query | `tmux send-keys -t claude-local -l 'text' && tmux send-keys -t claude-local Enter` |
 | Wait for response | `.claude/skills/local-claude/scripts/tmux-poll-wait.sh claude-local` |
 | Wait (custom timeout) | `.claude/skills/local-claude/scripts/tmux-poll-wait.sh claude-local 120` |
 | Attach | `tmux attach -t claude-local` |
