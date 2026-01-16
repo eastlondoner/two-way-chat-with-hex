@@ -55,6 +55,7 @@ ssh desktop "zsh -l -c 'tmux capture-pane -t claude-desktop -p -S -50'"
 | Check status | `ssh desktop "zsh -l -c 'tmux capture-pane -t claude-desktop -p -S -30'"` |
 | Send query | `ssh desktop "zsh -l -c 'tmux send-keys -t claude-desktop -l \"text\" && tmux send-keys -t claude-desktop Enter'"` |
 | List sessions | `ssh desktop "zsh -l -c 'tmux list-sessions'"` |
+| Attach to session | `ssh -t desktop "zsh -l -c 'tmux attach -t claude-desktop'"` |
 | Kill session | `ssh desktop "zsh -l -c 'tmux kill-session -t claude-desktop'"` |
 
 ## Helper Functions
@@ -62,14 +63,14 @@ ssh desktop "zsh -l -c 'tmux capture-pane -t claude-desktop -p -S -50'"
 For convenience, add these to your workflow:
 
 ```bash
-# Send command to desktop Claude (uses -l for literal mode)
+# Send command to desktop Claude (uses tmux buffer to handle quotes safely)
 desktop_claude_send() {
-    ssh desktop "zsh -l -c 'tmux send-keys -t claude-desktop -l \"$1\" && tmux send-keys -t claude-desktop Enter'"
+    printf '%s' "$1" | ssh desktop "zsh -l -c 'tmux load-buffer - && tmux paste-buffer -t claude-desktop && tmux send-keys -t claude-desktop Enter'"
 }
 
-# Get desktop Claude output
+# Get desktop Claude output (use -J to join wrapped lines)
 desktop_claude_output() {
-    ssh desktop "zsh -l -c 'tmux capture-pane -t claude-desktop -p -S -${1:-50}'"
+    ssh desktop "zsh -l -c 'tmux capture-pane -t claude-desktop -p -J -S -${1:-50}'"
 }
 
 # Full query with response
@@ -79,6 +80,8 @@ desktop_claude_query() {
     desktop_claude_output "${3:-50}"
 }
 ```
+
+> **Note**: The `desktop_claude_send` function pipes input through `tmux load-buffer` to avoid quoting issues. This safely handles queries containing quotes or special characters.
 
 ## Important Notes
 
