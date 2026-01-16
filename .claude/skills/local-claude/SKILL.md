@@ -42,6 +42,10 @@ tmux capture-pane -t claude-local -p -S -100 \
 - `head -n -1` - remove the trailing "next command" line
 - `grep -v` - filter out UI chrome (separators, mode indicators)
 
+**Tips:**
+- Add `-J` to `capture-pane` to join wrapped lines: `tmux capture-pane -t claude-local -p -J -S -100`
+- Set `LC_ALL=C.UTF-8` before running to ensure consistent `❯` prompt matching across locales
+
 **Note:** If the same query appears multiple times in scrollback, this captures ALL occurrences. To get only the most recent response, use this awk-based extraction:
 
 ```bash
@@ -74,7 +78,8 @@ tmux pipe-pane -t claude-local 'cat > /tmp/output.txt'
 tmux send-keys -t claude-local -l 'query' && tmux send-keys -t claude-local Enter
 sleep 15
 tmux pipe-pane -t claude-local  # stop piping
-cat /tmp/output.txt
+# Strip ANSI escape codes for clean output
+sed -r 's/\x1B\[[0-9;]*[A-Za-z]//g' /tmp/output.txt
 ```
 
 ### Session Commands
@@ -137,5 +142,8 @@ tmux new-session -d -s claude-reauth "bash -c 'unset CLAUDE_CODE_REMOTE CLAUDE_C
 .claude/skills/local-claude/scripts/tmux-poll-wait.sh claude-reauth 30
 # After user provides code:
 tmux send-keys -t claude-reauth 'CODE_HERE' Enter
-gh variable set CLAUDE_CREDENTIALS --repo eastlondoner/claude --body "$(base64 -w0 ~/.claude/.credentials.json)"
+# Use base64 | tr -d '\n' for cross-platform compatibility (macOS/Linux)
+gh variable set CLAUDE_CREDENTIALS --repo eastlondoner/claude --body "$(base64 ~/.claude/.credentials.json | tr -d '\n')"
 ```
+
+**Security note:** For production use, consider using `gh secret set` instead of `gh variable set` for sensitive credentials, as secrets are encrypted and not visible in logs.
