@@ -9,15 +9,17 @@ A pre-warmed Claude Code TUI session runs in tmux, started automatically by the 
 
 ## Quick Reference
 
-### Send Query to Pre-started Session
+### Send Query and Wait for Response
 
 ```bash
-# Send query (text and Enter must be separate tmux calls)
+# Send query
 tmux send-keys -t claude-local 'your query here' && tmux send-keys -t claude-local Enter
 
-# Capture response
-sleep 15 && tmux capture-pane -t claude-local -p -S -80
+# Wait for response to stabilize, then capture (recommended)
+~/.claude/skills/local-claude/scripts/tmux-poll-wait.sh claude-local
 ```
+
+The polling script waits until output stabilizes (3 consecutive unchanged polls at 3s intervals) or times out after 60s, then outputs the final capture.
 
 ### Session Commands
 
@@ -25,6 +27,8 @@ sleep 15 && tmux capture-pane -t claude-local -p -S -80
 |--------|---------|
 | Check status | `tmux capture-pane -t claude-local -p -S -30` |
 | Send query | `tmux send-keys -t claude-local 'text' && tmux send-keys -t claude-local Enter` |
+| Wait for response | `~/.claude/skills/local-claude/scripts/tmux-poll-wait.sh claude-local` |
+| Wait (custom timeout) | `~/.claude/skills/local-claude/scripts/tmux-poll-wait.sh claude-local 120` |
 | Attach | `tmux attach -t claude-local` |
 | Restart | `tmux kill-session -t claude-local` (will restart on next session) |
 
@@ -37,13 +41,32 @@ The `.githooks/post-checkout` hook (triggered by SessionStart) handles everythin
 
 Only runs in remote environments (`CLAUDE_CODE_REMOTE=true`).
 
+## Polling Script
+
+The bundled `scripts/tmux-poll-wait.sh` intelligently waits for Claude to finish:
+
+- Polls `capture-pane` every 3 seconds
+- Hashes the last 100 lines to detect changes
+- Exits after 3 consecutive unchanged polls (9s of stability)
+- Falls back to timeout (default 60s, configurable)
+- Only outputs the final capture (no logging to stdout/stderr)
+
+```bash
+# Usage
+~/.claude/skills/local-claude/scripts/tmux-poll-wait.sh <session> [timeout_seconds]
+
+# Examples
+~/.claude/skills/local-claude/scripts/tmux-poll-wait.sh claude-local      # 60s timeout
+~/.claude/skills/local-claude/scripts/tmux-poll-wait.sh claude-local 120  # 120s timeout
+```
+
 ## OAuth Re-authentication
 
 Only needed if credentials are revoked:
 
 ```bash
 tmux new-session -d -s claude-reauth "bash -c 'unset CLAUDE_CODE_REMOTE CLAUDE_CODE_ENTRYPOINT CLAUDECODE CLAUDE_CODE_SESSION_ID CLAUDE_CODE_REMOTE_SESSION_ID CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR CLAUDE_CODE_WEBSOCKET_AUTH_FILE_DESCRIPTOR; exec claude /login'"
-sleep 5 && tmux capture-pane -t claude-reauth -p
+~/.claude/skills/local-claude/scripts/tmux-poll-wait.sh claude-reauth 30
 # After user provides code:
 tmux send-keys -t claude-reauth 'CODE_HERE' Enter
 gh variable set CLAUDE_CREDENTIALS --repo eastlondoner/claude --body "$(base64 -w0 ~/.claude/.credentials.json)"
