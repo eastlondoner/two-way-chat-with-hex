@@ -43,13 +43,21 @@ Only runs in remote environments (`CLAUDE_CODE_REMOTE=true`).
 
 ## Polling Script
 
-The bundled `scripts/tmux-poll-wait.sh` intelligently waits for Claude to finish:
+The bundled `scripts/tmux-poll-wait.sh` intelligently waits for Claude to finish.
 
-- Polls `capture-pane` every 3 seconds
-- Hashes the last 100 lines to detect changes
-- Exits after 3 consecutive unchanged polls (9s of stability)
-- Falls back to timeout (default 60s, configurable)
-- Only outputs the final capture (no logging to stdout/stderr)
+**Requirements:** `tmux` must be installed and the target session must exist.
+
+**Exit codes:**
+- `0` - Output stabilized (success)
+- `1` - Session not found
+- `124` - Timeout (like GNU timeout)
+
+**Environment variables (optional):**
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TMUX_POLL_INTERVAL` | 3 | Seconds between polls |
+| `TMUX_POLL_STABLE` | 3 | Consecutive unchanged polls required |
+| `TMUX_POLL_LINES` | 100 | Lines to capture for comparison |
 
 ```bash
 # Usage
@@ -58,6 +66,10 @@ The bundled `scripts/tmux-poll-wait.sh` intelligently waits for Claude to finish
 # Examples
 .claude/skills/local-claude/scripts/tmux-poll-wait.sh claude-local      # 60s timeout
 .claude/skills/local-claude/scripts/tmux-poll-wait.sh claude-local 120  # 120s timeout
+
+# Check exit code to distinguish stable vs timeout
+.claude/skills/local-claude/scripts/tmux-poll-wait.sh claude-local > output.txt
+if [ $? -eq 124 ]; then echo "Timed out"; fi
 ```
 
 ## OAuth Re-authentication
