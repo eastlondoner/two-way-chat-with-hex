@@ -378,6 +378,30 @@ configure_claude_state() {
 # Run the configuration
 configure_claude_state
 
+# Update vibe-plugins marketplace cache to get latest plugins
+update_vibe_plugins() {
+    VIBE_PLUGINS_DIR="${HOME}/.claude/plugins/marketplaces/vibe-plugins"
+
+    if [ -d "$VIBE_PLUGINS_DIR/.git" ]; then
+        log "Updating vibe-plugins marketplace cache..."
+        cd "$VIBE_PLUGINS_DIR"
+
+        # Fetch and reset to origin/main to get latest
+        if git fetch origin main --quiet 2>/dev/null && git reset --hard origin/main --quiet 2>/dev/null; then
+            COMMIT=$(git rev-parse --short HEAD)
+            log "vibe-plugins updated to $COMMIT"
+        else
+            log "Failed to update vibe-plugins (may be offline or auth issue)"
+        fi
+
+        cd - > /dev/null
+    else
+        log "vibe-plugins marketplace not cached yet, will be fetched on first use"
+    fi
+}
+
+update_vibe_plugins
+
 # Pre-start local Claude TUI session in remote environments
 start_local_claude_session() {
     # Only start in remote Claude Code environments
