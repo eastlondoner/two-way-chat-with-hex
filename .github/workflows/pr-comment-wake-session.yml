@@ -57,11 +57,37 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Get Claude credentials from GitHub variable
+        id: creds
+        run: |
+          # Use vars context directly (simpler than gh api)
+          CREDS_B64="${{ vars.CLAUDE_CREDENTIALS }}"
+
+          if [ -z "$CREDS_B64" ]; then
+            echo "No CLAUDE_CREDENTIALS variable found"
+            echo "found=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Decode and extract access token
+          ACCESS_TOKEN=$(echo "$CREDS_B64" | base64 -d | jq -r '.claudeAiOauth.accessToken // empty')
+
+          if [ -z "$ACCESS_TOKEN" ]; then
+            echo "Could not extract access token from credentials"
+            echo "found=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "found=true" >> $GITHUB_OUTPUT
+          # Mask the token in logs
+          echo "::add-mask::$ACCESS_TOKEN"
+          echo "access_token=$ACCESS_TOKEN" >> $GITHUB_OUTPUT
+
       - name: Wake Claude session
         id: wake
+        if: steps.creds.outputs.found == 'true'
         env:
-          CLAUDE_ACCESS_TOKEN: ${{ secrets.CLAUDE_ACCESS_TOKEN }}
-          CLAUDE_ORG_UUID: ${{ secrets.CLAUDE_ORG_UUID }}
+          CLAUDE_ACCESS_TOKEN: ${{ steps.creds.outputs.access_token }}
         run: |
           # Build the wake-up message
           PR_NUMBER="${{ steps.pr.outputs.pr_number }}"
@@ -86,7 +112,7 @@ jobs:
           node .github/scripts/wake-session.js "$PR_BRANCH" "$MESSAGE"
 
       - name: Post status comment
-        if: steps.wake.outputs.session_found == 'true'
+        if: steps.creds.outputs.found == 'true' && steps.wake.outputs.session_found == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

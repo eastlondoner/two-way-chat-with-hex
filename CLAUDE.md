@@ -228,28 +228,11 @@ A GitHub Action automatically wakes Claude Code sessions when comments are poste
 3. Queries the Claude Code web API to find sessions matching that branch
 4. Sends a wake-up message to the most recently updated session with the comment context
 
-### Required GitHub Secrets
+### Required GitHub Variables
 
-Configure these secrets in the repository settings:
+The workflow automatically uses the `CLAUDE_CREDENTIALS` GitHub variable that is already synced by the post-commit hook. No additional configuration needed!
 
-| Secret | Description | How to Get |
-|--------|-------------|------------|
-| `CLAUDE_ACCESS_TOKEN` | OAuth access token for Claude API | Extract from `~/.claude/.credentials.json` (`claudeAiOauth.accessToken`) |
-| `CLAUDE_ORG_UUID` | Organization UUID (optional) | Will be fetched automatically if not set |
-
-### Extracting Credentials
-
-From a Claude Code session or local CLI:
-
-```bash
-# Get access token
-cat ~/.claude/.credentials.json | jq -r '.claudeAiOauth.accessToken'
-
-# Get org UUID (requires authentication)
-curl -s -H "Authorization: Bearer $(cat ~/.claude/.credentials.json | jq -r '.claudeAiOauth.accessToken')" \
-  -H "anthropic-version: 2023-06-01" \
-  https://api.anthropic.com/api/oauth/profile | jq -r '.organization.uuid'
-```
+The credentials are automatically kept in sync by the post-commit hook whenever a Claude Code session makes a commit.
 
 ### Workflow File
 
