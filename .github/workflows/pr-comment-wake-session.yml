@@ -121,13 +121,19 @@ jobs:
           SESSION_STATUS="${{ steps.wake.outputs.session_status }}"
           PR_NUMBER="${{ steps.pr.outputs.pr_number }}"
 
-          # Only post if session was idle (actually woken up)
           if [ "$SESSION_STATUS" = "idle" ]; then
             gh pr comment $PR_NUMBER --body "🤖 Waking Claude session to address this comment.
 
           **Session:** ${SESSION_TITLE}
           **Session ID:** \`${SESSION_ID}\`
-          **Previous Status:** ${SESSION_STATUS}
+
+          [View session](https://claude.ai/code/${SESSION_ID})"
+          else
+            gh pr comment $PR_NUMBER --body "🤖 Notified active Claude session about this comment.
+
+          **Session:** ${SESSION_TITLE}
+          **Session ID:** \`${SESSION_ID}\`
+          **Status:** ${SESSION_STATUS}
 
           [View session](https://claude.ai/code/${SESSION_ID})"
           fi
