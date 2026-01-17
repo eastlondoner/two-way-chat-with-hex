@@ -59,11 +59,9 @@ jobs:
 
       - name: Get Claude credentials from GitHub variable
         id: creds
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
-          # Fetch CLAUDE_CREDENTIALS variable (same as post-checkout hook uses)
-          CREDS_B64=$(gh api repos/${{ github.repository }}/actions/variables/CLAUDE_CREDENTIALS --jq '.value' 2>/dev/null || echo "")
+          # Use vars context directly (simpler than gh api)
+          CREDS_B64="${{ vars.CLAUDE_CREDENTIALS }}"
 
           if [ -z "$CREDS_B64" ]; then
             echo "No CLAUDE_CREDENTIALS variable found"
