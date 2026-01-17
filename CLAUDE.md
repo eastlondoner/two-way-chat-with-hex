@@ -247,4 +247,3 @@ The wake-up message includes:
 - Links to PR and comment
 
 The session will then process the comment and respond appropriately.
-# Testing wake workflow
