@@ -2,6 +2,52 @@
 
 Enhanced Ralph Wiggum technique with a diary/journal system for continuous improvement.
 
+## Installation
+
+### Option 1: Install from vibe-plugins marketplace (Recommended)
+
+```bash
+# Inside Claude Code
+/plugin install ralph-journal@vibe-plugins
+```
+
+### Option 2: Load directly with --plugin-dir
+
+```bash
+# When starting Claude Code
+claude --plugin-dir /path/to/.claude/plugins/ralph-journal
+```
+
+### Option 3: Copy to another project
+
+1. Copy the entire plugin directory:
+   ```bash
+   cp -r .claude/plugins/ralph-journal /path/to/other/project/.claude/plugins/
+   ```
+
+2. Enable the plugin in the target project's `.claude/settings.json`:
+   ```json
+   {
+     "enabledPlugins": {
+       "ralph-journal": true
+     }
+   }
+   ```
+
+### Option 4: Enable in current project
+
+Add to your `.claude/settings.json`:
+
+```json
+{
+  "enabledPlugins": {
+    "ralph-journal": true
+  }
+}
+```
+
+The plugin will be loaded automatically when Claude Code starts.
+
 ## Overview
 
 Ralph Journal extends the original Ralph Wiggum technique (continuous self-referential AI loops) with:
