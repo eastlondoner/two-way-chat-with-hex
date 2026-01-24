@@ -8,7 +8,8 @@
     }
   },
   "enabledPlugins": {
-    "vibe-skills@vibe-plugins": true
+    "vibe-skills@vibe-plugins": true,
+    "ralph-journal": true
   },
   "hooks": {
     "SessionStart": [
@@ -18,28 +19,6 @@
           {
             "type": "command",
             "command": ".githooks/post-checkout 0000000000000000000000000000000000000000 $(git rev-parse HEAD) 1"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": ".claude/plugins/ralph-journal/hooks/stop-hook.sh"
-          }
-        ]
-      }
-    ],
-    "PreCompact": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": ".claude/plugins/ralph-journal/hooks/pre-compact.sh"
           }
         ]
       }
