@@ -5,8 +5,8 @@
       "args": ["-c", "[ \"$CLAUDE_CODE_REMOTE\" = \"true\" ] && exit 0; exec npx -y tmux-mcp"]
     },
     "emceepee": {
-      "command": "bunx",
-      "args": ["emceepee"]
+      "command": "bash",
+      "args": ["-c", "[ \"$CLAUDE_CODE_REMOTE\" = \"true\" ] && exit 0; exec bunx emceepee"]
     }
   }
 }
