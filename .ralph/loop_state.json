@@ -1,11 +1,9 @@
 {
-  "active": false,
-  "loop_id": "1767720642-10521",
+  "active": true,
+  "loop_id": "1769351321-84665",
   "iteration": 1,
-  "max_iterations": 5,
-  "completion_promise": "HOOK_DEBUG_COMPLETE",
-  "prompt": "Investigate the hook input JSON structure in stop-hook.sh - find out what data is available in HOOK_INPUT, document the transcript_path structure, create a debugging script that logs hook inputs to /tmp/hook-debug.log, and test it works. Finally create a summary document at docs/HOOK_INPUT_FORMAT.md\n",
-  "started_at": "2026-01-06T17:30:42Z",
-  "completed": true,
-  "completed_at": 1767720892.004676
+  "max_iterations": 20,
+  "completion_promise": "ALL_TESTS_PASSING",
+  "prompt": "Get the Hex project building and running, and get all tests passing. Explore the hex submodule, understand its build system, fix any issues, and ensure the full test suite passes.\n",
+  "started_at": "2026-01-25T14:28:41Z"
 }

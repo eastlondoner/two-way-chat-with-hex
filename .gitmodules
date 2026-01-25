@@ -3,4 +3,7 @@
 	url = https://github.com/eastlondoner/vibe-plugins.git
 [submodule "hex"]
 	path = hex
-	url = https://github.com/kitlangton/Hex.git
+	url = https://github.com/eastlondoner/Hex.git
+[submodule "personaplex-mlx"]
+	path = personaplex-mlx
+	url = https://github.com/eastlondoner/personaplex-mlx.git
