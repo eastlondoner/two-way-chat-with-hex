@@ -252,6 +252,8 @@ The session will then process the comment and respond appropriately.
 
 Claude Code supports plugins that provide additional skills (behavioral guidance) and tools (executable functions). Skills are not visible in the tool list - they must be discovered by checking the filesystem.
 
+**Note:** Some commands below require `jq` for JSON parsing. Check availability with `jq --version`.
+
 ### Understanding the Difference
 
 | Type | Description | Visibility |
@@ -264,10 +266,10 @@ Claude Code supports plugins that provide additional skills (behavioral guidance
 
 ```bash
 # List all installed plugins
-ls ~/.claude/plugins/cache/
+ls ~/.claude/plugins/cache/ 2>/dev/null
 
-# View installed plugins manifest
-cat ~/.claude/plugins/installed_plugins.json | jq .
+# View installed plugins manifest (requires jq)
+cat ~/.claude/plugins/installed_plugins.json 2>/dev/null | jq .
 ```
 
 ### Check Available Skills Within a Plugin
@@ -292,10 +294,10 @@ cat ~/.claude/plugins/cache/vibe-plugins/vibe-skills/1.0.0/skills/code-review/SK
 
 ```bash
 # List marketplace repositories
-ls ~/.claude/plugins/marketplaces/
+ls ~/.claude/plugins/marketplaces/ 2>/dev/null
 
-# View marketplace plugin catalog
-cat ~/.claude/plugins/marketplaces/claude-plugins-official/.claude-plugin/marketplace.json | jq '.plugins[].name'
+# View marketplace plugin catalog (requires jq)
+cat ~/.claude/plugins/marketplaces/claude-plugins-official/.claude-plugin/marketplace.json 2>/dev/null | jq '.plugins[].name'
 ```
 
 ### Check MCP Server Status
