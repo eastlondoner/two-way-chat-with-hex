@@ -247,3 +247,82 @@ The wake-up message includes:
 - Links to PR and comment
 
 The session will then process the comment and respond appropriately.
+
+## Checking Available Plugins and Skills
+
+Claude Code supports plugins that provide additional skills (behavioral guidance) and tools (executable functions). Skills are not visible in the tool list - they must be discovered by checking the filesystem.
+
+**Note:** Some commands below require `jq` for JSON parsing. Check availability with `jq --version`.
+
+### Understanding the Difference
+
+| Type | Description | Visibility |
+|------|-------------|------------|
+| **Tools** | Executable functions (Bash, Read, Edit, etc.) | Visible in system prompt |
+| **Skills** | Markdown instructions that guide behavior | Must check filesystem |
+| **MCP Servers** | External tool providers (configured in `.mcp.json`) | Listed at startup |
+
+### Check Installed Plugins
+
+```bash
+# List all installed plugins
+ls ~/.claude/plugins/cache/ 2>/dev/null
+
+# View installed plugins manifest (requires jq)
+cat ~/.claude/plugins/installed_plugins.json 2>/dev/null | jq .
+```
+
+### Check Available Skills Within a Plugin
+
+```bash
+# List skills in the vibe-plugins marketplace
+find ~/.claude/plugins/cache/vibe-plugins -name "SKILL.md" 2>/dev/null
+
+# Example output:
+# ~/.claude/plugins/cache/vibe-plugins/vibe-skills/1.0.0/skills/code-review/SKILL.md
+# ~/.claude/plugins/cache/vibe-plugins/vibe-skills/1.0.0/skills/pr-merge-workflow/SKILL.md
+```
+
+### Read a Skill's Instructions
+
+```bash
+# View what a skill does
+cat ~/.claude/plugins/cache/vibe-plugins/vibe-skills/1.0.0/skills/code-review/SKILL.md
+```
+
+### Check Available Marketplaces
+
+```bash
+# List marketplace repositories
+ls ~/.claude/plugins/marketplaces/ 2>/dev/null
+
+# View marketplace plugin catalog (requires jq)
+cat ~/.claude/plugins/marketplaces/claude-plugins-official/.claude-plugin/marketplace.json 2>/dev/null | jq '.plugins[].name'
+```
+
+### Check MCP Server Status
+
+MCP servers are configured in `.mcp.json` but may be disabled in certain environments:
+
+```bash
+# View MCP configuration
+cat .mcp.json
+
+# Check if running in remote environment (MCP servers often disabled)
+echo $CLAUDE_CODE_REMOTE
+```
+
+### Quick Capability Check
+
+Run this to get a full overview of available capabilities:
+
+```bash
+echo "=== Installed Plugins ===" && \
+ls ~/.claude/plugins/cache/ 2>/dev/null && \
+echo -e "\n=== Available Skills ===" && \
+find ~/.claude/plugins/cache -name "SKILL.md" 2>/dev/null && \
+echo -e "\n=== MCP Servers ===" && \
+cat .mcp.json 2>/dev/null | jq -r '.mcpServers | keys[]' && \
+echo -e "\n=== Remote Environment ===" && \
+echo "CLAUDE_CODE_REMOTE=$CLAUDE_CODE_REMOTE"
+```
